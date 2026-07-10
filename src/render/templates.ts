@@ -149,6 +149,19 @@ a:hover { text-decoration: underline; }
 ul.outline, ul.outline ul { list-style: none; margin: 0; padding: 0; }
 ul.outline ul { padding-left: 1.25em; border-left: 1px solid #d1d9e0; margin-left: 0.4em; }
 ul.outline li { margin: 0.15em 0; }
+/* Markdown in an outline label renders inline: headings become bold labels
+   (no block margins/border) so they sit beside the summary triangle, and a
+   stray paragraph never adds vertical gaps to a row. */
+ul.outline :is(h1, h2, h3, h4, h5, h6) {
+  display: inline;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  font-size: 1em;
+  font-weight: 700;
+  line-height: inherit;
+}
+ul.outline li p { display: inline; margin: 0; }
 details > summary {
   cursor: pointer;
   list-style: none;

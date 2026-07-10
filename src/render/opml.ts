@@ -1,5 +1,6 @@
 import { readFile } from "node:fs/promises";
 import { basename, extname } from "node:path";
+import { marked } from "marked";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
 import type { EffectiveConfig } from "../domainConfig.js";
 import type { ServeRequest } from "../serve.js";
@@ -133,28 +134,52 @@ function renderOutline(outline: Record<string, unknown>): string {
 }
 
 /**
- * The visible label for an outline node: an anchor for `type="link"` (url) or
- * `type="rss"` (xmlUrl/url), otherwise escaped text. Everything interpolated is
- * escaped, so hostile `text`/`url` attributes can't break out of the markup.
+ * The visible label for an outline node: an anchor for type "link" (url) or
+ * type "rss" (xmlUrl/url), otherwise the text rendered as inline Markdown.
+ *
+ * Feed/link titles are escaped (they are plain labels, and rendering them as
+ * Markdown could nest anchors inside the generated anchor), so a hostile url
+ * cannot break out of the attribute. The href is always escaped.
  */
 function renderLabel(outline: Record<string, unknown>): string {
   const text = coerceText(attr(outline, "text")) ?? "";
-  const safeText = escapeHtml(text);
   const type = coerceText(attr(outline, "type"))?.toLowerCase();
 
   if (type === "link") {
     const url = coerceText(attr(outline, "url"));
-    if (url) return `<a href="${escapeHtml(url)}">${safeText}</a>`;
+    if (url) return `<a href="${escapeHtml(url)}">${escapeHtml(text)}</a>`;
   }
 
   if (type === "rss") {
     const url = coerceText(attr(outline, "xmlUrl")) ?? coerceText(attr(outline, "url"));
     if (url) {
-      return `<a href="${escapeHtml(url)}">${safeText}</a><span class="rss-tag">RSS</span>`;
+      return `<a href="${escapeHtml(url)}">${escapeHtml(text)}</a><span class="rss-tag">RSS</span>`;
     }
   }
 
-  return safeText;
+  return renderOutlineText(text);
+}
+
+/**
+ * Render an outline's text as Markdown for use as a label. OPML files live in
+ * the domain owner's folder, so their text is trusted the same way a Markdown
+ * page is: inline Markdown, "## " headings, and raw HTML (e.g. anchor links)
+ * all pass through. See the domains index.opml samples.
+ *
+ * A single enclosing paragraph tag is unwrapped so plain prose sits inline
+ * inside the summary/li label; Markdown's default block wrapping would
+ * otherwise push a paragraph into every outline row and break the layout.
+ * Genuine block output (headings, lists) is preserved and styled by the template.
+ */
+function renderOutlineText(text: string): string {
+  const html = marked.parse(text, { async: false }).trim();
+  if (html.startsWith("<p>") && html.endsWith("</p>")) {
+    const inner = html.slice(3, -4);
+    // Unwrap only a lone paragraph: if inner still holds a paragraph tag, the
+    // source was multi-block (several paragraphs) and must keep its wrappers.
+    if (!inner.includes("<p>") && !inner.includes("<p ")) return inner;
+  }
+  return html;
 }
 
 /** Read a prefixed attribute value off a parsed element. */

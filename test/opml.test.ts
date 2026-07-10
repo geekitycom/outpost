@@ -57,13 +57,39 @@ describe("renderOpmlPage outline structure", () => {
     expect(html).toContain("<summary");
   });
 
-  it("escapes the text attribute (XSS sanity)", () => {
+});
+
+describe("renderOpmlPage outline text is Markdown", () => {
+  it("renders a Markdown heading as an inline heading label", () => {
+    const html = renderOpmlPage(wrap("", '<outline text="## Section"/>'), "fb");
+    expect(html).toContain("<h2>Section</h2>");
+    expect(html).not.toContain("## Section");
+  });
+
+  it("renders plain prose inline, with no <p> wrapper to break the row", () => {
+    const html = renderOpmlPage(wrap("", '<outline text="Just some prose."/>'), "fb");
+    expect(html).toContain('<li class="leaf">Just some prose.</li>');
+    expect(html).not.toContain("<p>Just some prose.</p>");
+  });
+
+  it("renders a Markdown link in outline text", () => {
     const html = renderOpmlPage(
-      wrap("", '<outline text="&lt;img src=x onerror=alert(1)&gt;"/>'),
+      wrap("", '<outline text="see [here](https://ex.com/y)"/>'),
       "fb",
     );
-    expect(html).toContain("&lt;img src=x onerror=alert(1)&gt;");
-    expect(html).not.toContain("<img src=x onerror=alert(1)>");
+    expect(html).toContain('<a href="https://ex.com/y">here</a>');
+  });
+
+  it("passes owner-authored raw HTML links through (OPML is trusted like .md)", () => {
+    // The XML parser decodes the entities to a real <a> tag before Markdown runs.
+    const html = renderOpmlPage(
+      wrap(
+        "",
+        '<outline text="see &lt;a href=&quot;https://ex.com/x&quot;&gt;here&lt;/a&gt;"/>',
+      ),
+      "fb",
+    );
+    expect(html).toContain('<a href="https://ex.com/x">here</a>');
   });
 });
 

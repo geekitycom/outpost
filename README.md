@@ -113,7 +113,7 @@ Within a domain folder:
 | Extension        | Behavior                                                                                                   |
 |------------------|------------------------------------------------------------------------------------------------------------|
 | `.md`            | Rendered Markdown → HTML in a self-contained template. The first `# H1` becomes the title (else the file name). `Content-Type: text/html`. |
-| `.opml`          | Rendered outline → collapsible HTML. `text/html`. **Except**: with `Accept: text/x-opml` or `?format=opml`, the raw OPML XML is served as `text/x-opml`. |
+| `.opml`          | Rendered outline → collapsible HTML; each node's `text` is rendered as inline Markdown (links, `## ` headings, and raw HTML pass through). `text/html`. **Except**: with `Accept: text/x-opml` or `?format=opml`, the raw OPML XML is served as `text/x-opml`. |
 | `.html`, `.htm`  | Served as-is, `text/html`.                                                                                  |
 | `.js`            | Served as a **static** file (`text/javascript`) — never executed.                                          |
 | images / other   | Served as-is with a MIME type derived from the extension.                                                   |

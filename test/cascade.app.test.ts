@@ -49,9 +49,9 @@ describe("cascade end-to-end", () => {
     expect(res.status).toBe(404);
     const body = await res.text();
     expect(body).toContain("404");
-    // Distinctive to the styled 404.eta — proves the cascade loaded it, not the
-    // minimal embedded NOT_FOUND_FALLBACK.
-    expect(body).toContain("justify-content: center");
+    // Only the layout the styled 404.eta extends emits this external sheet link;
+    // the minimal embedded NOT_FOUND_FALLBACK inlines its CSS instead.
+    expect(body).toContain('href="/css/404.css"');
   });
 
   it("wraps a .md file in the styled markdown template found via the cascade", async () => {
@@ -62,9 +62,9 @@ describe("cascade end-to-end", () => {
     expect(res.status).toBe(200);
     const body = await res.text();
     expect(body).toContain("<h1>Notes</h1>");
-    // The link color `#0969da` appears only in the styled markdown.eta, never in
-    // the embedded MARKDOWN_FALLBACK — so the cascade template won.
-    expect(body).toContain("#0969da");
+    // Only the layout the styled markdown.eta extends emits this external sheet
+    // link; the embedded MARKDOWN_FALLBACK inlines its CSS — so the cascade won.
+    expect(body).toContain('href="/css/markdown.css"');
   });
 
   it("serves the example-dir welcome page when no default folder exists locally", async () => {

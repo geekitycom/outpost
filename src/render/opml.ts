@@ -53,7 +53,7 @@ export async function renderOpml(
     const fallbackTitle =
       config.siteTitle ?? basename(filePath, extname(filePath));
     const template = loadTemplateSource(roots, "opml") ?? OPML_FALLBACK;
-    const html = renderOpmlPage(source, fallbackTitle, template);
+    const html = renderOpmlPage(source, fallbackTitle, template, roots);
     return new Response(html, {
       status: 200,
       headers: { "content-type": "text/html; charset=utf-8" },
@@ -86,6 +86,7 @@ export function renderOpmlPage(
   source: string,
   fallbackTitle: string,
   template: string = OPML_FALLBACK,
+  roots: string[] = [],
 ): string {
   const validation = XMLValidator.validate(source);
   if (validation !== true) {
@@ -113,14 +114,18 @@ export function renderOpmlPage(
       ? `<p class="opml-meta">Last modified: ${escapeHtml(dateModified)}</p>`
       : "";
 
-  return renderTemplate(template, {
-    // Raw title/header: the template's `<%= %>` escapes them. `meta`/`body` are
-    // already-built HTML fragments and pass through raw via `<%~ %>`.
-    title: pageTitle,
-    header: pageTitle,
-    meta,
-    body: `<ul class="outline">${outlineHtml}</ul>`,
-  });
+  return renderTemplate(
+    template,
+    {
+      // Raw title/header: the template's `<%= %>` escapes them. `meta`/`body`
+      // are already-built HTML fragments and pass through raw via `<%~ %>`.
+      title: pageTitle,
+      header: pageTitle,
+      meta,
+      body: `<ul class="outline">${outlineHtml}</ul>`,
+    },
+    roots,
+  );
 }
 
 /**

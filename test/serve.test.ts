@@ -7,6 +7,12 @@ import type { Config } from "../src/config.js";
 const domainsDir = resolve(__dirname, "fixtures/domains");
 const domainFolder = join(domainsDir, "example.com");
 
+/** A shipped CSS asset, used to exercise cache headers on externalized styles. */
+const baseCss = resolve(
+  __dirname,
+  "../domains.example/default/css/base.css",
+);
+
 const config: Config = {
   port: 3000,
   host: "127.0.0.1",
@@ -83,5 +89,29 @@ describe("serveFile", () => {
     const res = await serveFile(join(domainFolder, "broken.opml"), config);
     expect(res.status).toBe(500);
     expect(res.headers.get("content-type")).toMatch(/text\/plain/);
+  });
+
+  it("caches a static .css asset (Cache-Control)", async () => {
+    const res = await serveFile(baseCss, config);
+    expect(res.status).toBe(200);
+    expect(res.headers.get("content-type")).toMatch(/text\/css/);
+    expect(res.headers.get("cache-control")).toBe("public, max-age=3600");
+  });
+
+  it("caches a static image and stamps Last-Modified", async () => {
+    const res = await serveFile(join(domainFolder, "logo.png"), config);
+    expect(res.headers.get("cache-control")).toBe("public, max-age=3600");
+    expect(res.headers.get("last-modified")).toBeTruthy();
+  });
+
+  it("does not cache a static .html file (stays fresh)", async () => {
+    const res = await serveFile(join(domainFolder, "page.html"), config);
+    expect(res.headers.get("content-type")).toMatch(/^text\/html/);
+    expect(res.headers.get("cache-control")).toBeNull();
+  });
+
+  it("caches static .js (non-HTML)", async () => {
+    const res = await serveFile(join(domainFolder, "app.js"), config);
+    expect(res.headers.get("cache-control")).toBe("public, max-age=3600");
   });
 });

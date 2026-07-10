@@ -9,7 +9,7 @@
  * consts below are the emergency defaults used when no root supplies one.
  */
 
-import { readFileSync } from "node:fs";
+import { readFileSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { Eta } from "eta";
 
@@ -26,16 +26,44 @@ export function escapeHtml(value: string): string {
 /** Shared Eta instance; templates are trusted strings, so defaults are fine. */
 const eta = new Eta();
 
+// Resolve a bare template name used by `layout(...)`/`include(...)` against the
+// current request's cascade roots (threaded in per-render via `withConfig`),
+// so an override in an earlier root shadows a later one — the same order
+// `loadTemplateSource` walks. Eta's default `readFile` then reads the absolute
+// path returned here.
+eta.resolvePath = function (name) {
+  const roots =
+    (this.config as unknown as { cascadeRoots?: string[] }).cascadeRoots ?? [];
+  const file = name.endsWith(".eta") ? name : `${name}.eta`;
+  for (const root of roots) {
+    const p = join(root, "_templates", file);
+    try {
+      if (statSync(p).isFile()) return p;
+    } catch {
+      // Not in this root — try the next one.
+    }
+  }
+  throw new Error(`Outpost: template "${name}" not found in any root`);
+};
+
 /**
  * Render an Eta template `source` with `data` exposed as `it`. `<%= it.x %>`
  * escapes; `<%~ it.x %>` emits raw HTML, so callers pass raw text for the
  * former and already-built HTML for the latter.
+ *
+ * `roots` are the request's cascade roots; a template that calls
+ * `layout("layout")`/`include(...)` resolves those bare names against them (see
+ * `eta.resolvePath`). The standalone `*_FALLBACK` consts call neither and so
+ * render fine with the default empty `roots`.
  */
 export function renderTemplate(
   source: string,
   data: Record<string, unknown> = {},
+  roots: string[] = [],
 ): string {
-  return eta.renderString(source, data);
+  return eta
+    .withConfig({ cascadeRoots: roots } as never)
+    .renderString(source, data);
 }
 
 /**

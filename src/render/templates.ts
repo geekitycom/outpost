@@ -129,6 +129,7 @@ export const OPML_FALLBACK = `<!doctype html>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title><%= it.title %></title>
+<link rel="alternate" type="text/x-opml" href="<%= it.opmlHref %>" title="OPML">
 <style>
 :root { color-scheme: light dark; }
 body {

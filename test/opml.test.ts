@@ -165,6 +165,27 @@ describe("renderOpmlPage link handling", () => {
   });
 });
 
+describe("renderOpmlPage advertises the raw OPML", () => {
+  const src = wrap("<title>Doc</title>", '<outline text="a"/>');
+
+  it("builds the ?format=opml href from the file name (so an index download is named)", () => {
+    const html = renderOpmlPage(src, "fb", undefined, [], "index.opml");
+    expect(html).toContain(
+      '<link rel="alternate" type="text/x-opml" href="index.opml?format=opml" title="OPML">',
+    );
+  });
+
+  it("URL-encodes a file name with reserved characters", () => {
+    const html = renderOpmlPage(src, "fb", undefined, [], "my notes.opml");
+    expect(html).toContain('href="my%20notes.opml?format=opml"');
+  });
+
+  it("falls back to a bare query when no file name is given", () => {
+    const html = renderOpmlPage(src, "fb");
+    expect(html).toContain('href="?format=opml"');
+  });
+});
+
 describe("renderOpmlPage is self-contained", () => {
   it("emits no external asset/script/style references", () => {
     const html = renderOpmlPage(

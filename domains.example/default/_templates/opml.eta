@@ -1,5 +1,6 @@
-<% layout("layout", { stylesheet: "opml", bodyClass: "page-opml" }) %>
+<% layout("layout", { stylesheet: "opml", bodyClass: "page-opml", opmlHref: it.opmlHref }) %>
 <header>
+<a class="opml-badge" href="<%= it.opmlHref %>"><img src="/img/xml.gif" width="36" height="14" alt="View as OPML"></a>
 <h1><%= it.header %></h1>
 <%~ it.meta %>
 </header>

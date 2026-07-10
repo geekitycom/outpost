@@ -11,6 +11,9 @@
 <link rel="manifest" href="/site.webmanifest">
 <link rel="stylesheet" href="/css/base.css">
 <link rel="stylesheet" href="/css/<%= it.stylesheet %>.css">
+<% if (it.opmlHref) { %>
+<link rel="alternate" type="text/x-opml" href="<%= it.opmlHref %>" title="OPML">
+<% } %>
 </head>
 <body class="<%= it.bodyClass %>">
 <main>

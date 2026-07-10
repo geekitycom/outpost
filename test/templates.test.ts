@@ -79,6 +79,7 @@ describe("shipped default templates render via the layout", () => {
         header: "Title",
         meta: '<p class="opml-meta">Last modified: now</p>',
         body: '<ul class="outline"><li class="leaf">node</li></ul>',
+        opmlHref: "index.opml?format=opml",
       },
       stylesheet: "opml",
       title: "Title",
@@ -128,6 +129,21 @@ describe("shipped default templates render via the layout", () => {
       expect(html).toContain(c.bodyText);
     });
   }
+
+  it("opml.eta advertises the raw OPML via the alternate link and XML badge", () => {
+    const html = render("opml", cases.opml.data);
+    expect(html).toContain(
+      '<link rel="alternate" type="text/x-opml" href="index.opml?format=opml" title="OPML">',
+    );
+    expect(html).toContain(
+      '<a class="opml-badge" href="index.opml?format=opml"><img src="/img/xml.gif"',
+    );
+  });
+
+  it("markdown.eta omits the OPML alternate link", () => {
+    const html = render("markdown", cases.markdown.data);
+    expect(html).not.toContain('rel="alternate"');
+  });
 
   /** Render a shipped template by name against the default domain root. */
   function render(name: string, data: Record<string, unknown>): string {

@@ -19,6 +19,8 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "vitest run",
+    "docker:build-push": "./scripts/docker-build-push.sh",
+    "docker:dry-run": "./scripts/docker-build-push.sh --dry-run",
     "prepare": "husky"
   },
   "dependencies": {

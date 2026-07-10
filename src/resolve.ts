@@ -104,6 +104,30 @@ export function resolvePath(
   return { kind: "file", path: candidate };
 }
 
+/**
+ * Resolve a request path against an ordered list of domain roots (§3.2).
+ *
+ * Each root is tried in turn via {@link resolvePath}; the first result whose
+ * kind is not `"notFound"` wins. This lets an earlier root shadow later ones,
+ * lets a request fall through to a later root when missing in earlier ones, and
+ * short-circuits on the first root that owns the directory (a directory-slash
+ * redirect is itself a non-`notFound` result). If every root yields `notFound`,
+ * the overall result is `notFound`.
+ */
+export function resolveInRoots(
+  roots: string[],
+  rawPath: string,
+  config: Config,
+): ResolveResult {
+  for (const root of roots) {
+    const result = resolvePath(root, rawPath, config);
+    if (result.kind !== "notFound") {
+      return result;
+    }
+  }
+  return { kind: "notFound" };
+}
+
 /** Look for `<indexFilename>.<ext>` in a directory and serve the first match. */
 function resolveIndex(
   dir: string,

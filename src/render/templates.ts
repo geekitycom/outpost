@@ -1,12 +1,17 @@
 /**
- * Default page templates and token substitution for the self-contained
- * renderers (Markdown now; OPML and a 404 page slot in alongside later).
+ * Page templating for the self-contained renderers (Markdown, OPML, and the
+ * 404 page).
  *
- * Templates are plain strings with `[%token%]` placeholders. `renderTemplate`
- * fills them in. Values that land inside HTML text/attributes must be run
- * through `escapeHtml` by the caller first — the substitution itself is literal
- * so that already-rendered HTML (e.g. a Markdown body) passes through intact.
+ * Templates are [Eta](https://eta.js.org) sources: `<%= it.x %>` HTML-escapes a
+ * value, `<%~ it.x %>` emits it raw. The real, styled templates live as `.eta`
+ * files under a domain's `_templates/` folder and are loaded via
+ * `loadTemplateSource`, cascading across the resolution roots. The `*_FALLBACK`
+ * consts below are the emergency defaults used when no root supplies one.
  */
+
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { Eta } from "eta";
 
 /** Escape the five HTML-significant characters for safe interpolation. */
 export function escapeHtml(value: string): string {
@@ -18,202 +23,139 @@ export function escapeHtml(value: string): string {
     .replace(/'/g, "&#39;");
 }
 
+/** Shared Eta instance; templates are trusted strings, so defaults are fine. */
+const eta = new Eta();
+
 /**
- * Replace every `[%token%]` in `template` with `tokens[token]`. Unknown tokens
- * are left untouched so a typo is visible rather than silently blanking output.
+ * Render an Eta template `source` with `data` exposed as `it`. `<%= it.x %>`
+ * escapes; `<%~ it.x %>` emits raw HTML, so callers pass raw text for the
+ * former and already-built HTML for the latter.
  */
 export function renderTemplate(
-  template: string,
-  tokens: Record<string, string>,
+  source: string,
+  data: Record<string, unknown> = {},
 ): string {
-  return template.replace(/\[%(\w+)%\]/g, (match, name: string) =>
-    Object.prototype.hasOwnProperty.call(tokens, name) ? tokens[name]! : match,
-  );
+  return eta.renderString(source, data);
 }
 
 /**
- * Self-contained Markdown page template. Tokens: `title` (escaped by the
- * caller) and `body` (already-rendered HTML). All styling is inline — no CDN,
- * no fonts, no scripts, no external assets of any kind (§5). The CSS is a small
- * hand-written GitHub-ish reading style using only system font stacks.
+ * Find a template by `name` (e.g. `"markdown"`) across `roots` in order,
+ * returning the source of the first `<root>/_templates/<name>.eta` that reads
+ * successfully, or `undefined` if none do. Paths are internal (not user input),
+ * so a missing file is expected and simply falls through to the next root.
  */
-export const MARKDOWN_TEMPLATE = `<!doctype html>
+export function loadTemplateSource(
+  roots: string[],
+  name: string,
+): string | undefined {
+  for (const root of roots) {
+    try {
+      return readFileSync(join(root, "_templates", `${name}.eta`), "utf8");
+    } catch {
+      // Not in this root — try the next one.
+    }
+  }
+  return undefined;
+}
+
+/**
+ * Emergency Markdown page template used when no `_templates/markdown.eta` is
+ * found in any root. Self-contained (inline CSS, no external assets, no
+ * scripts). Slots: `title` (escaped) and `body` (already-rendered HTML). The
+ * full styled version ships as `domains.example/default/_templates/markdown.eta`.
+ */
+export const MARKDOWN_FALLBACK = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>[%title%]</title>
+<title><%= it.title %></title>
 <style>
 :root { color-scheme: light dark; }
-* { box-sizing: border-box; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.6;
-  color: #1f2328;
-  background: #ffffff;
-  margin: 0;
-  padding: 2rem 1rem;
-}
-main {
   max-width: 46rem;
   margin: 0 auto;
-  word-wrap: break-word;
-}
-h1, h2, h3, h4, h5, h6 { line-height: 1.25; margin: 1.5em 0 0.5em; font-weight: 600; }
-h1 { font-size: 2em; padding-bottom: 0.3em; border-bottom: 1px solid #d1d9e0; }
-h2 { font-size: 1.5em; padding-bottom: 0.3em; border-bottom: 1px solid #d1d9e0; }
-h1:first-child, h2:first-child, h3:first-child { margin-top: 0; }
-p, ul, ol, blockquote, table, pre { margin: 0 0 1em; }
-a { color: #0969da; text-decoration: none; }
-a:hover { text-decoration: underline; }
-ul, ol { padding-left: 2em; }
-li + li { margin-top: 0.25em; }
-blockquote {
-  margin-left: 0;
-  padding: 0 1em;
-  color: #59636e;
-  border-left: 0.25em solid #d1d9e0;
-}
-code {
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 0.9em;
-  background: rgba(129, 139, 152, 0.12);
-  padding: 0.2em 0.4em;
-  border-radius: 6px;
-}
-pre {
-  background: #f6f8fa;
-  padding: 1em;
-  border-radius: 6px;
-  overflow: auto;
-}
-pre code { background: none; padding: 0; font-size: 0.85em; }
-table { border-collapse: collapse; display: block; overflow: auto; }
-th, td { padding: 0.4em 0.8em; border: 1px solid #d1d9e0; }
-th { background: #f6f8fa; }
-img { max-width: 100%; }
-hr { height: 1px; border: 0; background: #d1d9e0; margin: 1.5em 0; }
-@media (prefers-color-scheme: dark) {
-  body { color: #e6edf3; background: #0d1117; }
-  h1, h2 { border-bottom-color: #3d444d; }
-  a { color: #4493f8; }
-  blockquote { color: #9198a1; border-left-color: #3d444d; }
-  code { background: rgba(101, 108, 118, 0.2); }
-  pre { background: #151b23; }
-  th, td { border-color: #3d444d; }
-  th { background: #151b23; }
-  hr { background: #3d444d; }
+  padding: 2rem 1rem;
 }
 </style>
 </head>
 <body>
 <main>
-[%body%]
+<%~ it.body %>
 </main>
 </body>
 </html>
 `;
 
 /**
- * Self-contained OPML outline page template. Tokens: `title` and `header`
- * (escaped by the caller) and `body` (already-rendered outline HTML).
- *
- * The outline collapses/expands with native `<details>`/`<summary>` — zero
- * JavaScript, so there is no `<script>` and nothing external to load. All
- * styling is inline hand-written CSS using only system fonts (§5). No CDN,
- * no scripting.com, no Dave/Fargo assets, no frameworks.
+ * Emergency OPML page template used when no `_templates/opml.eta` is found in
+ * any root. Self-contained (inline CSS, no external assets, no scripts). Slots:
+ * `title`/`header` (escaped) and `meta`/`body` (already-built HTML). The full
+ * styled version ships as `domains.example/default/_templates/opml.eta`.
  */
-export const OPML_TEMPLATE = `<!doctype html>
+export const OPML_FALLBACK = `<!doctype html>
 <html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>[%title%]</title>
+<title><%= it.title %></title>
 <style>
 :root { color-scheme: light dark; }
-* { box-sizing: border-box; }
 body {
   font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
   line-height: 1.5;
-  color: #1f2328;
-  background: #ffffff;
-  margin: 0;
+  max-width: 52rem;
+  margin: 0 auto;
   padding: 2rem 1rem;
 }
-main { max-width: 52rem; margin: 0 auto; word-wrap: break-word; }
-header { margin: 0 0 1.5rem; }
-h1 { font-size: 1.75em; line-height: 1.25; margin: 0 0 0.25rem; font-weight: 600; }
-.opml-meta { color: #59636e; font-size: 0.9em; margin: 0; }
-a { color: #0969da; text-decoration: none; }
-a:hover { text-decoration: underline; }
-ul.outline, ul.outline ul, ul.outline ol { list-style: none; margin: 0; padding: 0; }
-ul.outline ul, ul.outline ol { padding-left: 1.25em; border-left: 1px solid #d1d9e0; margin-left: 0.4em; }
-ul.outline li { margin: 0.15em 0; }
-/* flBulletedSubs / flNumberedSubs: show a marker beside each sub. The marker
-   sits in extra left padding so it clears the summary triangle / leaf indent. */
-ul.outline ul.subs-bulleted { list-style: disc; padding-left: 2.4em; }
-ul.outline ol.subs-numbered { list-style: decimal; padding-left: 2.4em; }
-ul.outline ul.subs-bulleted > li,
-ul.outline ol.subs-numbered > li { margin: 0.15em 0; }
-ul.outline ul.subs-bulleted > li.leaf,
-ul.outline ol.subs-numbered > li.leaf { padding-left: 0; }
-ul.outline ul.subs-bulleted > li::marker,
-ul.outline ol.subs-numbered > li::marker { color: #59636e; }
-/* Markdown in an outline label renders inline: headings become bold labels
-   (no block margins/border) so they sit beside the summary triangle, and a
-   stray paragraph never adds vertical gaps to a row. */
-ul.outline :is(h1, h2, h3, h4, h5, h6) {
-  display: inline;
-  margin: 0;
-  padding: 0;
-  border: 0;
-  font-size: 1em;
-  font-weight: 700;
-  line-height: inherit;
-}
-ul.outline li p { display: inline; margin: 0; }
-details > summary {
-  cursor: pointer;
-  list-style: none;
-  padding: 0.1em 0;
-}
-details > summary::-webkit-details-marker { display: none; }
-details > summary::before {
-  content: "\\25B8";
-  display: inline-block;
-  width: 1em;
-  color: #59636e;
-  transition: transform 0.1s ease;
-}
-details[open] > summary::before { transform: rotate(90deg); }
-li.leaf { padding-left: 1em; }
-.rss-tag {
-  font-size: 0.7em;
-  color: #59636e;
-  border: 1px solid #d1d9e0;
-  border-radius: 4px;
-  padding: 0 0.3em;
-  margin-left: 0.4em;
-  vertical-align: middle;
-}
-@media (prefers-color-scheme: dark) {
-  body { color: #e6edf3; background: #0d1117; }
-  .opml-meta, details > summary::before, .rss-tag { color: #9198a1; }
-  a { color: #4493f8; }
-  ul.outline ul, ul.outline ol { border-left-color: #3d444d; }
-  ul.outline ul.subs-bulleted > li::marker,
-  ul.outline ol.subs-numbered > li::marker { color: #9198a1; }
-  .rss-tag { border-color: #3d444d; }
-}
+ul.outline, ul.outline ul, ul.outline ol { list-style: none; margin: 0; padding-left: 1.25em; }
+.opml-meta { color: #59636e; font-size: 0.9em; }
 </style>
 </head>
 <body>
 <main>
 <header>
-<h1>[%header%]</h1>
-[%meta%]
+<h1><%= it.header %></h1>
+<%~ it.meta %>
 </header>
-[%body%]
+<%~ it.body %>
+</main>
+</body>
+</html>
+`;
+
+/**
+ * Emergency 404 page template used when no `_templates/404.eta` is found in any
+ * root. Self-contained (inline CSS, no external assets, no scripts). The
+ * optional `path` slot names the missing resource when the caller supplies it.
+ */
+export const NOT_FOUND_FALLBACK = `<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>404 Not Found</title>
+<style>
+:root { color-scheme: light dark; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  line-height: 1.6;
+  text-align: center;
+  margin: 0 auto;
+  padding: 4rem 1rem;
+}
+h1 { font-size: 4em; margin: 0; color: #59636e; }
+</style>
+</head>
+<body>
+<main>
+<h1>404</h1>
+<p>Not Found</p>
+<% if (it.path) { %>
+<p><code><%= it.path %></code> could not be found.</p>
+<% } %>
 </main>
 </body>
 </html>

@@ -1,11 +1,12 @@
-import { statSync } from "node:fs";
 import { join } from "node:path";
 import type { Config } from "./config.js";
 
 /**
  * Normalize a raw Host (or X-Forwarded-Host) header value into a bare hostname:
  * take the first value if comma-separated, strip any `:port` suffix, trim, and
- * lowercase. Returns undefined when there is nothing usable.
+ * lowercase. Returns undefined when there is nothing usable, or when the host
+ * could enable path traversal once joined onto a filesystem path — it contains a
+ * `/` or `\`, or has an empty label (e.g. `..`, `a..b`).
  */
 export function normalizeHost(raw: string | undefined | null): string | undefined {
   if (!raw) return undefined;
@@ -13,35 +14,42 @@ export function normalizeHost(raw: string | undefined | null): string | undefine
   const first = raw.split(",")[0] ?? "";
   // Strip a :port suffix. IPv6 literals aren't a concern for domain routing here.
   const host = first.trim().replace(/:\d+$/, "").toLowerCase();
-  return host.length > 0 ? host : undefined;
-}
-
-function isDir(path: string): boolean {
-  try {
-    return statSync(path).isDirectory();
-  } catch {
-    return false;
-  }
+  if (host.length === 0) return undefined;
+  // Reject path separators and empty labels: domainSearchRoots joins the host
+  // onto a filesystem path, so these could otherwise escape the domains root.
+  if (host.includes("/") || host.includes("\\")) return undefined;
+  if (host.split(".").some((label) => label.length === 0)) return undefined;
+  return host;
 }
 
 /**
- * Resolve a hostname to an absolute domain folder path per §3.1:
- *   1. `domains/<host>` if it exists.
- *   2. Otherwise, for a 3-label host `a.b.c`, `domains/*.b.c` if it exists.
- *   3. Otherwise, `domains/<defaultDomain>`.
+ * Build the ordered, de-duplicated list of candidate domain-folder paths for a
+ * host — the cascade a caller walks (stat-ing each) before falling to a 404:
+ *   1. `domainsDir/<host>` (exact).
+ *   2. `domainsDir/*.<rest>` (wildcard: leftmost label replaced with `*`), for
+ *      any host of 2+ labels (e.g. `opml.localhost` → `*.localhost`).
+ *   3. `domainsDir/<defaultDomain>` (the local default fallback).
+ *   4. `exampleDir/<defaultDomain>` (the shipped example default), when
+ *      `config.exampleDir` is set — the final fallback before a 404.
  *
- * The returned path is not guaranteed to exist (the default folder may be absent);
- * callers handle a missing folder as a 404.
+ * Later roots are shadowed by earlier ones; file, `config.json`, and template
+ * lookups all walk this list so the most-specific root wins per key. Paths are
+ * not guaranteed to exist; the caller is responsible for stat-ing them.
  */
-export function resolveDomainFolder(host: string, config: Config): string {
-  const exact = join(config.domainsDir, host);
-  if (isDir(exact)) return exact;
+export function domainSearchRoots(host: string, config: Config): string[] {
+  const candidates: string[] = [];
+  candidates.push(join(config.domainsDir, host));
 
   const labels = host.split(".");
-  if (labels.length === 3) {
-    const wildcard = join(config.domainsDir, `*.${labels[1]}.${labels[2]}`);
-    if (isDir(wildcard)) return wildcard;
+  if (labels.length >= 2) {
+    candidates.push(join(config.domainsDir, `*.${labels.slice(1).join(".")}`));
   }
 
-  return join(config.domainsDir, config.defaultDomain);
+  candidates.push(join(config.domainsDir, config.defaultDomain));
+  if (config.exampleDir) {
+    candidates.push(join(config.exampleDir, config.defaultDomain));
+  }
+
+  // De-duplicate by exact string equality, preserving first-seen order.
+  return [...new Set(candidates)];
 }

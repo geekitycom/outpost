@@ -4,7 +4,12 @@ import { marked } from "marked";
 import { XMLParser, XMLValidator } from "fast-xml-parser";
 import type { EffectiveConfig } from "../domainConfig.js";
 import type { ServeRequest } from "../serve.js";
-import { escapeHtml, OPML_TEMPLATE, renderTemplate } from "./templates.js";
+import {
+  escapeHtml,
+  loadTemplateSource,
+  OPML_FALLBACK,
+  renderTemplate,
+} from "./templates.js";
 
 /** Attribute prefix so parsed attributes are explicit and can't collide with child element names. */
 const ATTR_PREFIX = "@_";
@@ -31,6 +36,7 @@ export async function renderOpml(
   filePath: string,
   config: EffectiveConfig,
   request: ServeRequest = {},
+  roots: string[] = [],
 ): Promise<Response> {
   const source = await readFile(filePath, "utf8");
 
@@ -46,7 +52,8 @@ export async function renderOpml(
     // outline's <head> has no <title> of its own.
     const fallbackTitle =
       config.siteTitle ?? basename(filePath, extname(filePath));
-    const html = renderOpmlPage(source, fallbackTitle);
+    const template = loadTemplateSource(roots, "opml") ?? OPML_FALLBACK;
+    const html = renderOpmlPage(source, fallbackTitle, template);
     return new Response(html, {
       status: 200,
       headers: { "content-type": "text/html; charset=utf-8" },
@@ -71,10 +78,15 @@ function wantsRawOpml(request: ServeRequest): boolean {
  *
  * The page `<title>`/header is the `<head><title>`, falling back to
  * `fallbackTitle` (the file's base name). The `<body>`'s nested `<outline>`
- * elements become a collapsible nested list. Throws on malformed XML so the
+ * elements become a collapsible nested list, wrapped in the given `template`
+ * (the embedded fallback by default). Throws on malformed XML so the
  * `renderOpml` wrapper can return a 500 rather than crash.
  */
-export function renderOpmlPage(source: string, fallbackTitle: string): string {
+export function renderOpmlPage(
+  source: string,
+  fallbackTitle: string,
+  template: string = OPML_FALLBACK,
+): string {
   const validation = XMLValidator.validate(source);
   if (validation !== true) {
     throw new Error(
@@ -101,9 +113,11 @@ export function renderOpmlPage(source: string, fallbackTitle: string): string {
       ? `<p class="opml-meta">Last modified: ${escapeHtml(dateModified)}</p>`
       : "";
 
-  return renderTemplate(OPML_TEMPLATE, {
-    title: escapeHtml(pageTitle),
-    header: escapeHtml(pageTitle),
+  return renderTemplate(template, {
+    // Raw title/header: the template's `<%= %>` escapes them. `meta`/`body` are
+    // already-built HTML fragments and pass through raw via `<%~ %>`.
+    title: pageTitle,
+    header: pageTitle,
     meta,
     body: `<ul class="outline">${outlineHtml}</ul>`,
   });

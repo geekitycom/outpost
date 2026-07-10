@@ -1,0 +1,5 @@
+<!doctype html>
+<title><%= it.title %></title>
+<main data-source="tmpl-fallback">
+<%~ it.body %>
+</main>

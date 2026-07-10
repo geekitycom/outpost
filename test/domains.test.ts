@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { resolve, join } from "node:path";
-import { normalizeHost, resolveDomainFolder } from "../src/domains.js";
+import { normalizeHost, domainSearchRoots } from "../src/domains.js";
 import type { Config } from "../src/config.js";
 
 const domainsDir = resolve(__dirname, "fixtures/domains");
@@ -15,46 +15,53 @@ const config: Config = {
   defaultType: "text/html",
 };
 
-describe("resolveDomainFolder", () => {
-  it("resolves an exact host folder", () => {
-    expect(resolveDomainFolder("example.com", config)).toBe(
+describe("domainSearchRoots", () => {
+  it("lists the exact host folder first", () => {
+    expect(domainSearchRoots("example.com", config)[0]).toBe(
       join(domainsDir, "example.com"),
     );
   });
 
-  it("resolves a 3-label host via the wildcard folder", () => {
-    expect(resolveDomainFolder("blog.wild.com", config)).toBe(
+  it("includes the wildcard folder second for a 2-label host", () => {
+    expect(domainSearchRoots("opml.localhost", config)[1]).toBe(
+      join(domainsDir, "*.localhost"),
+    );
+  });
+
+  it("replaces the leftmost label with a wildcard for a 3-label host", () => {
+    expect(domainSearchRoots("blog.wild.com", config)[1]).toBe(
       join(domainsDir, "*.wild.com"),
     );
   });
 
-  it("falls back to the default domain folder for an unknown host", () => {
-    expect(resolveDomainFolder("nope.example.org", config)).toBe(
+  it("ends with the default folder then the example fallback when exampleDir is set", () => {
+    const exampleDir = resolve(__dirname, "fixtures/example");
+    const cfg: Config = { ...config, exampleDir };
+    const roots = domainSearchRoots("opml.localhost", cfg);
+    expect(roots.slice(-2)).toEqual([
       join(domainsDir, "default"),
-    );
+      join(exampleDir, "default"),
+    ]);
   });
 
-  it("prefers an exact match over the wildcard", () => {
-    // example.com is 2 labels so no wildcard applies, but confirm exact wins
-    expect(resolveDomainFolder("example.com", config)).toBe(
-      join(domainsDir, "example.com"),
-    );
+  it("appends no example root when exampleDir is omitted", () => {
+    // `config` has no exampleDir; the chain must end at the default folder.
+    const roots = domainSearchRoots("opml.localhost", config);
+    expect(roots.at(-1)).toBe(join(domainsDir, "default"));
   });
 
-  it("does not apply the wildcard to a 2-label host", () => {
-    // "wild.com" is only 2 labels; there is a "*.wild.com" folder but it must
-    // not be used — falls through to the default.
-    expect(resolveDomainFolder("wild.com", config)).toBe(
+  it("adds no wildcard root for a single-label host", () => {
+    const roots = domainSearchRoots("localhost", config);
+    expect(roots).toEqual([
+      join(domainsDir, "localhost"),
       join(domainsDir, "default"),
-    );
+    ]);
   });
 
-  it("returns the default path even when the default folder is absent", () => {
-    // resolveDomainFolder never throws for a missing default; the caller 404s.
-    const cfg: Config = { ...config, defaultDomain: "no-such-default" };
-    expect(resolveDomainFolder("nobody.example.org", cfg)).toBe(
-      join(domainsDir, "no-such-default"),
-    );
+  it("de-duplicates when the host equals the default domain", () => {
+    // "default" resolves to the same folder as the default fallback; list it once.
+    const roots = domainSearchRoots("default", config);
+    expect(roots).toEqual([join(domainsDir, "default")]);
   });
 });
 
@@ -80,5 +87,13 @@ describe("normalizeHost", () => {
 
   it("trims surrounding whitespace", () => {
     expect(normalizeHost("  example.com  ")).toBe("example.com");
+  });
+
+  it("rejects hosts containing path separators or empty labels", () => {
+    // Guards against path traversal now that roots join the host onto a fs path.
+    expect(normalizeHost("../../etc")).toBeUndefined();
+    expect(normalizeHost("a\\b")).toBeUndefined();
+    expect(normalizeHost("..")).toBeUndefined();
+    expect(normalizeHost("a..b")).toBeUndefined();
   });
 });

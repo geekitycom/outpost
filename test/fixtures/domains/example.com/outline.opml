@@ -1,0 +1,15 @@
+<?xml version="1.0" encoding="utf-8"?>
+<opml version="2.0">
+  <head>
+    <title>Sample Outline</title>
+    <dateModified>Mon, 28 Jul 2025 21:44:17 GMT</dateModified>
+  </head>
+  <body>
+    <outline text="Top level node">
+      <outline text="A child node"/>
+      <outline text="Anthropic" type="link" url="https://www.anthropic.com/"/>
+      <outline text="Example feed" type="rss" xmlUrl="https://feeds.example.com/rss.xml"/>
+    </outline>
+    <outline text="Second top-level node"/>
+  </body>
+</opml>

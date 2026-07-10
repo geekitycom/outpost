@@ -1,0 +1,24 @@
+# Sample Caddyfile for fronting Outpost.
+#
+# Caddy terminates TLS (automatic HTTPS) and reverse-proxies to Outpost on
+# 127.0.0.1:3000. Caddy v2 PRESERVES the original Host header by default (unlike
+# nginx, which rewrites it), so the real requested domain reaches Outpost intact
+# — that Host header is exactly what Outpost routes on to pick a domain folder.
+# Caddy also sets X-Forwarded-Host / -Proto / -For automatically.
+#
+# List every domain Outpost serves. They can all point at the same upstream;
+# Outpost decides which domains/<host> folder to serve from the Host header.
+
+example.com, www.example.com {
+	reverse_proxy localhost:3000
+}
+
+blog.example.org {
+	reverse_proxy localhost:3000
+}
+
+# A wildcard host (needs a wildcard TLS cert / DNS challenge) maps to a
+# domains/*.example.net folder in Outpost.
+*.example.net {
+	reverse_proxy localhost:3000
+}

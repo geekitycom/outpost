@@ -1,0 +1,7 @@
+node_modules/
+dist/
+*.log
+
+# Local content served by the dev server (mount a real volume in production).
+/domains/
+!/test/fixtures/domains/

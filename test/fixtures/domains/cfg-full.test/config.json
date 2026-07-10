@@ -1,0 +1,7 @@
+{
+  "indexFilename": "main",
+  "defaultType": "application/json",
+  "siteTitle": "Branded Site",
+  "unknownKey": "ignored",
+  "redirects": { "a": "b" }
+}

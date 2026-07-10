@@ -1,0 +1,49 @@
+# Outpost — Dockge-friendly Compose file.
+#
+# Caddy on the host terminates TLS and reverse-proxies to 127.0.0.1:${PORT}.
+# Publishing on 127.0.0.1 (not 0.0.0.0) keeps the app reachable only through
+# Caddy, which is what makes trusting the forwarded headers safe.
+
+services:
+  outpost:
+    build: .
+    # Or, if you publish an image instead of building here:
+    # image: outpost:latest
+    container_name: outpost
+    restart: unless-stopped
+
+    environment:
+      # HTTP port inside the container (and the published host port).
+      PORT: "3000"
+      # Bind all interfaces inside the container so the publish mapping reaches it.
+      HOST: "0.0.0.0"
+      # Where the app looks for per-domain content folders (mounted below).
+      OUTPOST_DOMAINS_DIR: "/domains"
+      # Folder name used when no exact/wildcard domain folder matches.
+      OUTPOST_DEFAULT_DOMAIN: "default"
+      # Base name (no extension) of a directory's index file.
+      OUTPOST_INDEX_FILENAME: "index"
+      # Content-Type served for extension-less files.
+      OUTPOST_DEFAULT_TYPE: "text/html"
+      # Trust X-Forwarded-Host as a Host fallback (safe: only Caddy reaches us).
+      TRUST_FORWARDED_HEADERS: "on"
+
+    ports:
+      # Publish on loopback only — Caddy proxies to this.
+      - "127.0.0.1:3000:3000"
+
+    volumes:
+      # Host content dir → container domains root. Edit content outside the
+      # container; it persists across deploys. Adjust the host path as needed.
+      - ./domains:/domains
+
+    healthcheck:
+      test:
+        - "CMD"
+        - "node"
+        - "-e"
+        - "fetch('http://127.0.0.1:'+(process.env.PORT||3000)+'/healthz').then(r=>r.text()).then(t=>process.exit(t.trim()==='ok'?0:1)).catch(()=>process.exit(1))"
+      interval: 30s
+      timeout: 5s
+      start_period: 5s
+      retries: 3

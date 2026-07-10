@@ -1,0 +1,30 @@
+# Never copy installed deps or build output — the image builds these itself.
+node_modules
+dist
+
+# VCS + CI
+.git
+.gitignore
+.github
+
+# Tests and fixtures (not needed in the production image).
+test
+vitest.config.*
+
+# Content is a mounted volume, not baked into the image.
+domains
+
+# Docs / project files not needed at runtime.
+README.md
+PLAN.md
+LICENSE
+
+# Docker + editor cruft
+Dockerfile
+.dockerignore
+compose.yaml
+Caddyfile
+*.log
+.DS_Store
+.vscode
+.idea

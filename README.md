@@ -264,8 +264,9 @@ docker compose up -d --build
 
 To run the **published image** instead of building locally, paste this stack
 into Dockge (it pulls `ghcr.io/geekitycom/outpost`, published by
-`pnpm docker:build-push`). Put the env vars in an adjacent `.env` file and mount
-your host content dir at `/domains`:
+`pnpm docker:build-push`). The image already defaults `HOST=0.0.0.0`,
+`OUTPOST_DOMAINS_DIR=/domains`, and `TRUST_FORWARDED_HEADERS=on`, so all you
+need is the port and your host content dir mounted at `/domains`:
 
 ```yaml
 services:
@@ -274,22 +275,15 @@ services:
     restart: unless-stopped
     ports:
       - 127.0.0.1:3000:3000
-    env_file:
-      - .env
     volumes:
       - ./domains:/domains
 networks: {}
 ```
 
-```dotenv
-# .env
-PORT=3000
-HOST=0.0.0.0
-OUTPOST_DOMAINS_DIR=/domains
-TRUST_FORWARDED_HEADERS=on
-```
-
-Publishing on `127.0.0.1` keeps the container reachable only through Caddy.
+Publishing on `127.0.0.1` keeps the container reachable only through Caddy. To
+override any [config env var](#configuration-environment-variables), add an
+`env_file: [.env]` (or an `environment:` block) — none is required for a
+default run.
 
 ### Caddy (TLS + virtual hosts)
 

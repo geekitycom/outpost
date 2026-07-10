@@ -20,11 +20,12 @@ the legacy reference implementation has been deleted.
 **If you're an agent/contributor picking this up, know this before writing code:**
 
 ### Commands
-- `npm run dev` — run locally with hot reload (`tsx watch src/index.ts`).
-- `npm run build` — compile TS → `dist/` (this is the Docker/production path).
-- `npm start` — run compiled output (`node dist/index.js`).
-- `npm run typecheck` — `tsc --noEmit`. Must stay clean.
-- `npm test` — `vitest run`.
+Package manager is **pnpm** (via corepack; pinned by `packageManager` in `package.json`). Run `corepack enable` once, then `pnpm install`.
+- `pnpm dev` — run locally with hot reload (`tsx watch src/index.ts`).
+- `pnpm build` — compile TS → `dist/` (this is the Docker/production path).
+- `pnpm start` — run compiled output (`node dist/index.js`).
+- `pnpm typecheck` — `tsc --noEmit`. Must stay clean.
+- `pnpm test` — `vitest run`.
 
 ### Conventions
 - **Node 20+, ESM, TypeScript strict** (`NodeNext` resolution). Because of NodeNext,
@@ -348,7 +349,7 @@ Use **vitest** with fixture domain folders under `test/fixtures/domains/`:
    dependency audit. Confirmed: none of the banned Dave/deprecated packages are present
    in `package.json` or the lockfile; the dep tree is exactly `hono`, `@hono/node-server`,
    `mime-types`, `marked`, `fast-xml-parser` (+ devDeps `typescript`, `tsx`, `vitest`,
-   `@types/node`, `@types/mime-types`); `npm audit --omit=dev` reports 0 vulnerabilities;
+   `@types/node`, `@types/mime-types`); `pnpm audit --prod` reports 0 vulnerabilities;
    `src/` has no `child_process`/`exec`/`spawn`/`eval`/external-host calls. App still
    builds, all 120 tests pass, and `node dist/index.js` serves `/healthz`.
 

@@ -3,8 +3,12 @@
   "version": "1.0.0",
   "description": "A folder-based HTTP server that serves static and rendered (HTML/OPML/Markdown) pages per domain. Inspired by Dave Winer's PagePark.",
   "type": "module",
+  "packageManager": "pnpm@10.26.1",
   "engines": {
     "node": ">=20"
+  },
+  "pnpm": {
+    "ignoredBuiltDependencies": ["esbuild"]
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",

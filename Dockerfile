@@ -5,24 +5,31 @@
 FROM node:22-slim AS build
 WORKDIR /app
 
+# pnpm is provisioned by corepack, pinned via the "packageManager" field in
+# package.json. COREPACK_ENABLE_DOWNLOAD_PROMPT=0 keeps the build non-interactive.
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable
+
 # Copy manifests first for better layer caching: deps only re-install when they change.
-COPY package.json package-lock.json ./
-RUN npm ci
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --frozen-lockfile
 
 # Copy the sources needed to compile and build.
 COPY tsconfig.json ./
 COPY src ./src
-RUN npm run build
+RUN pnpm run build
 
 # ── Runtime stage ─────────────────────────────────────────────────────────────
 # Slim Node base, production deps only, non-root, compiled JS.
 FROM node:22-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
+ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
+RUN corepack enable
 
 # Install production dependencies only.
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+COPY package.json pnpm-lock.yaml ./
+RUN pnpm install --prod --frozen-lockfile && pnpm store prune
 
 # Copy the compiled output. Templates are inlined as TS strings at build time
 # (compiled into dist/), so the legacy templates/ dir is NOT shipped.

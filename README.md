@@ -29,11 +29,15 @@ existed in the legacy implementation and were deliberately removed.
 
 ## Quick start
 
-Requires **Node 20+**.
+Requires **Node 20+**. This project uses **pnpm**, provisioned via
+[corepack](https://nodejs.org/api/corepack.html) (bundled with Node) — the exact
+version is pinned by the `packageManager` field in `package.json`, so you don't
+install pnpm globally.
 
 ```sh
-npm install
-npm run dev          # hot-reload dev server (tsx watch), on http://127.0.0.1:3000
+corepack enable      # one-time: activates the pinned pnpm
+pnpm install
+pnpm dev             # hot-reload dev server (tsx watch), on http://127.0.0.1:3000
 ```
 
 Create some content and visit it (the dev server reads `./domains` by default):
@@ -47,13 +51,13 @@ curl http://127.0.0.1:3000/healthz     # → ok
 
 ### Scripts
 
-| Command             | What it does                                            |
-|---------------------|---------------------------------------------------------|
-| `npm run dev`       | Run locally with hot reload (`tsx watch src/index.ts`). |
-| `npm run build`     | Compile TypeScript → `dist/` (the production path).     |
-| `npm start`         | Run the compiled output (`node dist/index.js`).         |
-| `npm run typecheck` | `tsc --noEmit` — must stay clean.                       |
-| `npm test`          | Run the vitest suite.                                   |
+| Command           | What it does                                            |
+|-------------------|---------------------------------------------------------|
+| `pnpm dev`        | Run locally with hot reload (`tsx watch src/index.ts`). |
+| `pnpm build`      | Compile TypeScript → `dist/` (the production path).     |
+| `pnpm start`      | Run the compiled output (`node dist/index.js`).         |
+| `pnpm typecheck`  | `tsc --noEmit` — must stay clean.                       |
+| `pnpm test`       | Run the vitest suite.                                   |
 
 ---
 
@@ -233,9 +237,9 @@ header.
 ### Tests & typecheck
 
 ```sh
-npm test            # vitest run
-npm run typecheck   # tsc --noEmit
-npm run build       # compile to dist/
+pnpm test           # vitest run
+pnpm typecheck      # tsc --noEmit
+pnpm build          # compile to dist/
 ```
 
 ---

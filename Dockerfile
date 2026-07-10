@@ -35,6 +35,10 @@ RUN pnpm install --prod --frozen-lockfile && pnpm store prune
 # (compiled into dist/), so the legacy templates/ dir is NOT shipped.
 COPY --from=build /app/dist ./dist
 
+# Seed template used to populate an empty domains root (e.g. a freshly mounted
+# volume) on first boot. Resolved by the app relative to dist/, one level up.
+COPY domains.example ./domains.example
+
 # Sensible defaults. HOST=0.0.0.0 so the container is reachable from the host
 # publish mapping (compose publishes it as 127.0.0.1:PORT:PORT to stay proxy-only).
 ENV PORT=3000 \

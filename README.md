@@ -40,13 +40,17 @@ pnpm install
 pnpm dev             # hot-reload dev server (tsx watch), on http://127.0.0.1:3000
 ```
 
-Create some content and visit it (the dev server reads `./domains` by default):
+On first boot, if the domains root (`./domains` by default) is missing or empty,
+Outpost seeds it from the committed `domains.example/` template — so a fresh
+checkout, or a freshly mounted Docker volume, serves a welcome page immediately.
+An already-populated domains root is never overwritten.
+
+Visit the seeded page, then replace it with your own content:
 
 ```sh
-mkdir -p domains/default
-echo '<h1>Hello from Outpost</h1>' > domains/default/index.html
-curl http://127.0.0.1:3000/            # → the HTML above
+curl http://127.0.0.1:3000/            # → the seeded welcome page
 curl http://127.0.0.1:3000/healthz     # → ok
+echo '<h1>Hello from Outpost</h1>' > domains/default/index.html
 ```
 
 ### Scripts

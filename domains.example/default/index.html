@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Welcome to Outpost</title>
+    <style>
+      :root {
+        color-scheme: light dark;
+        --bg: #fbfbfa;
+        --fg: #1c1c1a;
+        --muted: #6b6b66;
+        --accent: #b4531f;
+        --card: #ffffff;
+        --border: #e6e4df;
+      }
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #17171a;
+          --fg: #ececea;
+          --muted: #9a9a94;
+          --accent: #e8834d;
+          --card: #1f1f23;
+          --border: #2c2c31;
+        }
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        min-height: 100vh;
+        display: grid;
+        place-items: center;
+        padding: 2rem;
+        background: var(--bg);
+        color: var(--fg);
+        font: 16px/1.6 system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+      }
+      main {
+        max-width: 34rem;
+        width: 100%;
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 2.5rem;
+      }
+      h1 { margin: 0 0 .25rem; font-size: 1.6rem; }
+      p.lead { margin: 0 0 1.5rem; color: var(--muted); }
+      code {
+        font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+        background: color-mix(in srgb, var(--accent) 12%, transparent);
+        color: var(--accent);
+        padding: .1em .4em;
+        border-radius: 5px;
+        font-size: .9em;
+      }
+      ol { margin: 0; padding-left: 1.25rem; }
+      li { margin: .5rem 0; }
+      footer { margin-top: 1.75rem; color: var(--muted); font-size: .85rem; }
+      a { color: var(--accent); }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Welcome to Outpost</h1>
+      <p class="lead">
+        Your server is running. This is the <code>default</code> domain — the
+        fallback served whenever no other domain folder matches the request.
+      </p>
+      <p>To publish your own content:</p>
+      <ol>
+        <li>
+          Add a folder named after your domain, e.g.
+          <code>domains/example.com/</code>.
+        </li>
+        <li>
+          Drop an <code>index.html</code> (or Markdown / OPML) file inside it.
+        </li>
+        <li>Point that domain's DNS and reverse proxy at Outpost.</li>
+      </ol>
+      <p>
+        Edit or replace this page at <code>domains/default/index.html</code>.
+      </p>
+      <footer>
+        Served by Outpost · a folder-based HTTP server.
+      </footer>
+    </main>
+  </body>
+</html>

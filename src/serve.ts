@@ -29,19 +29,23 @@ export interface ServeRequest {
  *
  * Files are buffered fully (fine for the MVP; streaming large binaries is a §11
  * nice-to-have).
+ *
+ * `roots` are the resolution roots threaded to the `.md`/`.opml` renderers so
+ * they can pick up a domain's `_templates/*.eta` overrides.
  */
 export async function serveFile(
   filePath: string,
   config: EffectiveConfig,
   request: ServeRequest = {},
+  roots: string[] = [],
 ): Promise<Response> {
   const ext = effectiveExtension(filePath, config);
 
   switch (ext) {
     case ".md":
-      return renderMarkdown(filePath, config);
+      return renderMarkdown(filePath, config, roots);
     case ".opml":
-      return renderOpml(filePath, config, request);
+      return renderOpml(filePath, config, request, roots);
     default:
       return serveStatic(filePath, config, ext);
   }

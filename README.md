@@ -12,11 +12,14 @@ inspired by Dave Winer's PagePark.
 
 ## What it does
 
-- Routes each request to a domain folder based on the `Host` header
-  (exact match → wildcard → default fallback).
+- Routes each request through an ordered **cascade** of domain folders selected
+  by the `Host` header (exact match → wildcard → default → shipped example
+  default). File, `config.json`, and template lookups all walk this cascade, and
+  the most-specific root that has an answer wins.
 - Serves static files (HTML, images, JS, anything) with a correct MIME type.
-- Renders **Markdown** (`.md`) and **OPML** (`.opml`) to self-contained HTML.
-- Supports an optional, minimal per-domain `config.json`.
+- Renders **Markdown** (`.md`) and **OPML** (`.opml`) to self-contained HTML via
+  [Eta](https://eta.js.org) templates that are overridable per domain.
+- Supports an optional, minimal per-domain `config.json` (merged down the cascade).
 - Terminates behind a reverse proxy (Caddy) that handles TLS and virtual hosts.
 
 It intentionally does **not** run node apps, execute `.js` files, do S3/GitHub
@@ -38,16 +41,19 @@ pnpm install
 pnpm dev             # hot-reload dev server (tsx watch), on http://127.0.0.1:3000
 ```
 
-On first boot, if the domains root (`./domains` by default) is missing or empty,
-Outpost seeds it from the committed `domains.example/` template — so a fresh
-checkout, or a freshly mounted Docker volume, serves a welcome page immediately.
-An already-populated domains root is never overwritten.
+On first boot, if the domains root (`./domains` by default) is missing, Outpost
+creates it **empty** — nothing is copied into it. Requests that no local folder
+answers fall through to the committed `domains.example/default/` as the final
+cascade fallback, so a fresh checkout (or a freshly mounted Docker volume) still
+serves the welcome page immediately without seeding anything.
 
-Visit the seeded page, then replace it with your own content:
+Visit the welcome page, then add your own content — a local `domains/default/`
+shadows the example fallback:
 
 ```sh
-curl http://127.0.0.1:3000/            # → the seeded welcome page
+curl http://127.0.0.1:3000/            # → the example welcome page (cascade fallback)
 curl http://127.0.0.1:3000/healthz     # → ok
+mkdir -p domains/default
 echo '<h1>Hello from Outpost</h1>' > domains/default/index.html
 ```
 
@@ -74,17 +80,27 @@ domains/
 │   └── index.html
 ├── *.example.net/        # wildcard: matches any a.example.net
 │   └── index.html
-└── default/              # fallback when nothing else matches
+└── default/              # local fallback when nothing else matches
     └── index.html
 ```
 
-**Host → folder resolution** for a resolved host (`Host` header, lowercased,
-`:port` stripped):
+**Host → cascade of roots.** A resolved host (`Host` header, lowercased, `:port`
+stripped) does not pick a single folder — it expands into an ordered, de-duplicated
+list of candidate roots, most-specific first:
 
-1. `domains/<host>` if that folder exists.
-2. Otherwise, if the host has 3 labels (`a.b.c`), try the **wildcard**
-   `domains/*.b.c` (first label replaced with `*`).
-3. Otherwise, fall back to `domains/<OUTPOST_DEFAULT_DOMAIN>` (default `default`).
+1. `domains/<host>` (exact).
+2. `domains/*.<rest>` — the **wildcard**, with the leftmost label replaced by `*`,
+   for any host of **2+ labels** (`opml.localhost` → `*.localhost`,
+   `blog.wild.com` → `*.wild.com`).
+3. `domains/<OUTPOST_DEFAULT_DOMAIN>` (default `default`) — the local fallback.
+4. `domains.example/<OUTPOST_DEFAULT_DOMAIN>` — the shipped example default, the
+   final fallback before a 404.
+
+Every lookup — the requested file, the merged `config.json`, and the page
+templates — walks this list in order, and the first root that answers wins (so an
+earlier root shadows later ones, and a request missing in one root falls through
+to the next). This is how a bare checkout still serves the example welcome page:
+no local root answers, so the request lands on `domains.example/default`.
 
 If the `Host` header is missing and `TRUST_FORWARDED_HEADERS` is on, Outpost
 falls back to `X-Forwarded-Host`. A missing host never crashes the server — it
@@ -102,7 +118,8 @@ Within a domain folder:
 - **Directory requests:** a directory URL without a trailing slash gets a 301
   redirect to add it; with a trailing slash, Outpost looks for an index file
   (`<indexFilename>.<ext>`, default base `index`) and serves the first match, else 404.
-- Missing files return a self-contained 404 page.
+- Missing files return a self-contained 404 page (rendered from the `404`
+  template found in the cascade, else a built-in fallback — see **Templates**).
 
 ---
 
@@ -123,6 +140,34 @@ plain-text 500 rather than crashing.
 
 ---
 
+## Templates
+
+The Markdown, OPML, and 404 pages are wrapped in [Eta](https://eta.js.org)
+templates loaded from a domain's `_templates/` folder:
+
+```
+domains/example.com/_templates/
+├── markdown.eta      # wraps rendered Markdown
+├── opml.eta          # wraps rendered OPML outlines
+└── 404.eta           # the not-found page
+```
+
+Templates are resolved **through the same cascade** as files: a request looks for
+`_templates/<name>.eta` in each root in order (exact host → wildcard → default →
+example default) and uses the first one found, so you can override one page for a
+single domain and inherit the rest. The styled defaults ship in
+`domains.example/default/_templates/` (`markdown.eta`, `opml.eta`, `404.eta`). If
+no root supplies a template, a minimal self-contained fallback (embedded in the
+binary) is used, so rendering never fails for lack of a template.
+
+Each template receives its slots via Eta's `it`: `<%= it.x %>` HTML-escapes a
+value, `<%~ it.x %>` emits already-built HTML raw. `markdown.eta` gets
+`title`/`body`; `opml.eta` gets `title`/`header`/`meta`/`body`; `404.eta` gets an
+optional `path`. Templates are trusted content — `_templates/` itself is never
+served (any `_`-prefixed segment is a 404).
+
+---
+
 ## Per-domain `config.json` (optional)
 
 Place an optional `config.json` at the root of a domain folder. Only these keys are
@@ -137,7 +182,10 @@ crashing:
 | `defaultExtension` | An extension-less file is served as if it had `.<defaultExtension>` (e.g. `md`/`opml` render). A real extension always wins; this takes precedence over `defaultType` for genuinely extension-less files. |
 | `siteTitle`        | Fallback page title for the Markdown/OPML wrappers when the document has no `# H1` / `<title>`. The document's own title still wins. |
 
-`config.json` itself is never served (404). It is read per request.
+`config.json` is **merged down the cascade**: each root's file is read and
+overlaid most-specific-first, so an exact-host `config.json` overrides the
+default's, key by key, and a root with no (or a malformed) file contributes
+nothing. `config.json` itself is never served (404). It is read per request.
 
 ---
 

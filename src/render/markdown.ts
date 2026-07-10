@@ -2,22 +2,31 @@ import { readFile } from "node:fs/promises";
 import { basename, extname } from "node:path";
 import { marked } from "marked";
 import type { EffectiveConfig } from "../domainConfig.js";
-import { escapeHtml, MARKDOWN_TEMPLATE, renderTemplate } from "./templates.js";
+import {
+  loadTemplateSource,
+  MARKDOWN_FALLBACK,
+  renderTemplate,
+} from "./templates.js";
 
 /**
  * Render a `.md` file to a full, self-contained HTML page `Response`
  * (`text/html`), per §3.3 / §5.2. Complexity (title extraction, templating)
  * lives behind this small interface so `serve.ts` just dispatches to it.
+ *
+ * `roots` are the resolution roots to search for a `_templates/markdown.eta`
+ * override; the embedded fallback is used when none supply one.
  */
 export async function renderMarkdown(
   filePath: string,
   config: EffectiveConfig,
+  roots: string[] = [],
 ): Promise<Response> {
   const source = await readFile(filePath, "utf8");
   // A per-domain siteTitle (§4) overrides the file-name fallback used when the
   // document has no `# H1` of its own.
   const fallbackTitle = config.siteTitle ?? basename(filePath, extname(filePath));
-  const html = renderMarkdownPage(source, fallbackTitle);
+  const template = loadTemplateSource(roots, "markdown") ?? MARKDOWN_FALLBACK;
+  const html = renderMarkdownPage(source, fallbackTitle, template);
   return new Response(html, {
     status: 200,
     headers: { "content-type": "text/html; charset=utf-8" },
@@ -29,19 +38,17 @@ export async function renderMarkdown(
  *
  * The page `<title>` is the first `# H1` heading's text, falling back to
  * `fallbackTitle` (the file's base name) when there is no H1 — mirroring the
- * legacy behavior. The rendered body is wrapped in a self-contained template
- * with inline CSS (no external assets).
+ * legacy behavior. The rendered body is wrapped in the given `template` (the
+ * embedded fallback by default), whose `<%= %>` escapes the raw title.
  */
 export function renderMarkdownPage(
   source: string,
   fallbackTitle: string,
+  template: string = MARKDOWN_FALLBACK,
 ): string {
   const title = extractTitle(source) ?? fallbackTitle;
   const body = marked.parse(source, { async: false });
-  return renderTemplate(MARKDOWN_TEMPLATE, {
-    title: escapeHtml(title),
-    body,
-  });
+  return renderTemplate(template, { title, body });
 }
 
 /** First `# H1` heading text, or `undefined` if the document has none. */

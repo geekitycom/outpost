@@ -1,12 +1,11 @@
 import { describe, it, expect, beforeEach, afterEach } from "vitest";
-import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, existsSync } from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, rmSync, readdirSync, existsSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { ensureDomainsDir } from "../src/bootstrap.js";
 import type { Config } from "../src/config.js";
 
 let tmp: string;
-let source: string;
 
 function makeConfig(domainsDir: string): Config {
   return {
@@ -22,10 +21,6 @@ function makeConfig(domainsDir: string): Config {
 
 beforeEach(() => {
   tmp = mkdtempSync(join(tmpdir(), "outpost-bootstrap-"));
-  // A stand-in for domains.example/ with a nested default domain.
-  source = join(tmp, "seed");
-  mkdirSync(join(source, "default"), { recursive: true });
-  writeFileSync(join(source, "default", "index.html"), "<h1>seed</h1>");
 });
 
 afterEach(() => {
@@ -33,24 +28,20 @@ afterEach(() => {
 });
 
 describe("ensureDomainsDir", () => {
-  it("seeds a missing domains root by copying the source", () => {
+  it("creates a missing domains root", () => {
     const to = join(tmp, "domains");
-    const result = ensureDomainsDir(makeConfig(to), source);
+    const result = ensureDomainsDir(makeConfig(to));
 
-    expect(result.seeded).toBe(true);
-    expect(result.from).toBe(source);
+    expect(result.created).toBe(true);
     expect(result.to).toBe(to);
-    expect(readFileSync(join(to, "default", "index.html"), "utf8")).toBe("<h1>seed</h1>");
+    expect(existsSync(to)).toBe(true);
   });
 
-  it("seeds an existing but empty domains root (e.g. a freshly mounted volume)", () => {
+  it("creates an empty domains root — nothing is copied in", () => {
     const to = join(tmp, "domains");
-    mkdirSync(to, { recursive: true });
+    ensureDomainsDir(makeConfig(to));
 
-    const result = ensureDomainsDir(makeConfig(to), source);
-
-    expect(result.seeded).toBe(true);
-    expect(existsSync(join(to, "default", "index.html"))).toBe(true);
+    expect(readdirSync(to)).toHaveLength(0);
   });
 
   it("leaves an already-populated domains root untouched", () => {
@@ -58,19 +49,21 @@ describe("ensureDomainsDir", () => {
     mkdirSync(join(to, "example.com"), { recursive: true });
     writeFileSync(join(to, "example.com", "index.html"), "<h1>mine</h1>");
 
-    const result = ensureDomainsDir(makeConfig(to), source);
+    const result = ensureDomainsDir(makeConfig(to));
 
-    expect(result.seeded).toBe(false);
-    // User content is preserved and the seed is NOT copied in.
+    expect(result.created).toBe(false);
+    // User content is preserved and no seed content is added.
     expect(readFileSync(join(to, "example.com", "index.html"), "utf8")).toBe("<h1>mine</h1>");
-    expect(existsSync(join(to, "default"))).toBe(false);
+    expect(readdirSync(to)).toEqual(["example.com"]);
   });
 
-  it("does not throw or seed when the source directory is absent", () => {
+  it("leaves an already-existing empty domains root as-is", () => {
     const to = join(tmp, "domains");
-    const result = ensureDomainsDir(makeConfig(to), join(tmp, "no-such-seed"));
+    mkdirSync(to, { recursive: true });
 
-    expect(result.seeded).toBe(false);
-    expect(existsSync(to)).toBe(false);
+    const result = ensureDomainsDir(makeConfig(to));
+
+    expect(result.created).toBe(false);
+    expect(readdirSync(to)).toHaveLength(0);
   });
 });

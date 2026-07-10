@@ -6,8 +6,8 @@ import { ensureDomainsDir } from "./bootstrap.js";
 const config = loadConfig();
 
 const bootstrap = ensureDomainsDir(config);
-if (bootstrap.seeded) {
-  console.log(`Outpost seeded a fresh domains root at ${bootstrap.to} from ${bootstrap.from}`);
+if (bootstrap.created) {
+  console.log(`Outpost created an empty domains root at ${bootstrap.to}`);
 }
 
 const app = createApp(config);

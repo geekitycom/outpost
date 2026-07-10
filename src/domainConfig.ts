@@ -88,6 +88,27 @@ export function loadDomainConfig(domainFolder: string): DomainConfig {
 }
 
 /**
+ * Merge a cascade of domain roots into a single {@link DomainConfig} (§4).
+ *
+ * `roots` is ordered most-specific-first (index 0 is the exact domain folder;
+ * later entries are fallbacks such as the default / example-default roots).
+ * Each root's `config.json` is read via {@link loadDomainConfig} — which yields
+ * only the keys actually present — then merged so the most-specific root wins
+ * per key. We walk from the last (least-specific) root forward, `Object.assign`-
+ * ing onto an accumulator, so earlier roots overwrite later ones and a root
+ * whose file is missing/malformed (an empty config) contributes nothing.
+ */
+export function loadDomainConfigCascade(roots: string[]): DomainConfig {
+  const merged: DomainConfig = {};
+  for (let i = roots.length - 1; i >= 0; i--) {
+    const root = roots[i];
+    if (root === undefined) continue;
+    Object.assign(merged, loadDomainConfig(root));
+  }
+  return merged;
+}
+
+/**
  * Merge per-domain overrides onto the global config for a single request.
  * Returns a fresh object (never mutates the global config). Domain values win
  * where present; otherwise the global defaults stand.

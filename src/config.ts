@@ -1,4 +1,5 @@
-import { resolve } from "node:path";
+import { dirname, resolve } from "node:path";
+import { fileURLToPath } from "node:url";
 
 /** Runtime configuration, resolved from environment variables at startup. */
 export interface Config {
@@ -10,6 +11,8 @@ export interface Config {
   domainsDir: string;
   /** Folder name used when no domain (or wildcard) folder matches. */
   defaultDomain: string;
+  /** Directory holding the shipped example/default content — the final cascade fallback before a 404. */
+  exampleDir?: string;
   /** Trust X-Forwarded-Host as a fallback when the Host header is absent/rewritten. */
   trustForwardedHeaders: boolean;
   /** Base name (without extension) of the directory index file. Default "index". */
@@ -37,6 +40,9 @@ export function loadConfig(env: NodeJS.ProcessEnv = process.env): Config {
     host: env.HOST ?? "127.0.0.1",
     domainsDir: resolve(env.OUTPOST_DOMAINS_DIR ?? "domains"),
     defaultDomain: env.OUTPOST_DEFAULT_DOMAIN ?? "default",
+    exampleDir: env.OUTPOST_EXAMPLE_DIR
+      ? resolve(env.OUTPOST_EXAMPLE_DIR)
+      : resolve(dirname(fileURLToPath(import.meta.url)), "..", "domains.example"),
     trustForwardedHeaders: envFlag(env.TRUST_FORWARDED_HEADERS, true),
     indexFilename: env.OUTPOST_INDEX_FILENAME ?? "index",
     defaultType: env.OUTPOST_DEFAULT_TYPE ?? "text/html",

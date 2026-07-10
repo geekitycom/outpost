@@ -1,19 +1,17 @@
 import { Hono } from "hono";
 import type { Context } from "hono";
 import type { Config } from "./config.js";
-import { normalizeHost, resolveDomainFolder } from "./domains.js";
-import { effectiveConfig, loadDomainConfig } from "./domainConfig.js";
-import { resolvePath } from "./resolve.js";
+import { normalizeHost, domainSearchRoots } from "./domains.js";
+import { effectiveConfig, loadDomainConfigCascade } from "./domainConfig.js";
+import { resolveInRoots } from "./resolve.js";
 import { serveFile } from "./serve.js";
+import {
+  loadTemplateSource,
+  NOT_FOUND_FALLBACK,
+  renderTemplate,
+} from "./render/templates.js";
 
 export const VERSION = "1.0.0";
-
-/** Minimal self-contained 404 page (fuller templating arrives with the renderers). */
-const NOT_FOUND_HTML =
-  "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\">" +
-  "<title>404 Not Found</title></head><body>" +
-  "<h1>404 Not Found</h1><p>The requested page could not be found.</p>" +
-  "</body></html>";
 
 /**
  * Build the Hono app: operational endpoints first, then a catch-all that routes
@@ -37,16 +35,21 @@ export function createApp(config: Config): Hono {
     }
 
     if (host === undefined) {
-      // Never let a missing/undefined host crash the server — serve 404.
+      // Never let a missing/undefined host crash the server — serve 404. There
+      // is no host, so there are no cascade roots: the emergency fallback applies.
       log(c.req.method, "-", pathname, 404);
-      return notFound(c);
+      return notFound(c, [], pathname);
     }
 
-    const domainFolder = resolveDomainFolder(host, config);
-    // Per-domain config.json overrides for this request (§4). Read per request;
-    // a missing/malformed file degrades to global defaults.
-    const eff = effectiveConfig(config, loadDomainConfig(domainFolder));
-    const result = resolvePath(domainFolder, pathname, eff);
+    // The ordered cascade of domain roots this request walks (§3.1): exact host
+    // → wildcard → default → the shipped example default.
+    const roots = domainSearchRoots(host, config);
+    // Per-domain config.json overrides for this request (§4), merged down the
+    // cascade (most-specific root wins). Read per request; missing/malformed
+    // files degrade to global defaults.
+    const eff = effectiveConfig(config, loadDomainConfigCascade(roots));
+    // First root with a non-404 result wins (file, redirect, or short-circuit).
+    const result = resolveInRoots(roots, pathname, eff);
 
     switch (result.kind) {
       case "redirect": {
@@ -56,18 +59,24 @@ export function createApp(config: Config): Hono {
       }
       case "file": {
         // Thread the request slice renderers need for content negotiation
-        // (§3.3: `.opml` raw-OPML via Accept header or ?format=opml).
-        const res = await serveFile(result.path, eff, {
-          accept: c.req.header("accept"),
-          format: url.searchParams.get("format") ?? undefined,
-        });
+        // (§3.3: `.opml` raw-OPML via Accept header or ?format=opml) and the
+        // cascade roots so `.md`/`.opml` pick up `_templates/*.eta` overrides.
+        const res = await serveFile(
+          result.path,
+          eff,
+          {
+            accept: c.req.header("accept"),
+            format: url.searchParams.get("format") ?? undefined,
+          },
+          roots,
+        );
         log(c.req.method, host, pathname, res.status);
         return res;
       }
       case "notFound":
       default: {
         log(c.req.method, host, pathname, 404);
-        return notFound(c);
+        return notFound(c, roots, pathname);
       }
     }
   });
@@ -75,8 +84,15 @@ export function createApp(config: Config): Hono {
   return app;
 }
 
-function notFound(c: Context): Response {
-  return c.html(NOT_FOUND_HTML, 404);
+/**
+ * Render the 404 page via the template cascade: the source of the first
+ * `_templates/404.eta` found across `roots`, or the embedded
+ * {@link NOT_FOUND_FALLBACK} when none supply one (or when there are no roots,
+ * e.g. the no-host early path). `path` names the missing resource in the page.
+ */
+function notFound(c: Context, roots: string[], path: string): Response {
+  const source = loadTemplateSource(roots, "404") ?? NOT_FOUND_FALLBACK;
+  return c.html(renderTemplate(source, { path }), 404);
 }
 
 /** Basic stdout request logging: method, host, path, status. */

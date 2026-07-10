@@ -31,12 +31,15 @@ RUN corepack enable
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --prod --frozen-lockfile && pnpm store prune
 
-# Copy the compiled output. Templates are inlined as TS strings at build time
-# (compiled into dist/), so the legacy templates/ dir is NOT shipped.
+# Copy the compiled output. Only the emergency fallback templates are embedded
+# as strings in dist/; the real, styled page templates ship as .eta files inside
+# domains.example (copied below), not compiled into the binary.
 COPY --from=build /app/dist ./dist
 
-# Seed template used to populate an empty domains root (e.g. a freshly mounted
-# volume) on first boot. Resolved by the app relative to dist/, one level up.
+# The shipped example default — the final root in the runtime cascade. It is the
+# fallback the app serves (welcome page + _templates/*.eta) when no local domain
+# folder answers a request; the domains root itself is created empty, not seeded.
+# Resolved by the app relative to dist/, one level up.
 COPY domains.example ./domains.example
 
 # Sensible defaults. HOST=0.0.0.0 so the container is reachable from the host

@@ -59,6 +59,47 @@ describe("renderOpmlPage outline structure", () => {
 
 });
 
+describe("renderOpmlPage headline sub-display flags", () => {
+  const parent = (attrs: string): string =>
+    wrap("", `<outline text="p" ${attrs}><outline text="a"/><outline text="b"/></outline>`);
+
+  it("expands subs by default (<details open>)", () => {
+    const html = renderOpmlPage(parent(""), "fb");
+    expect(html).toContain("<details open>");
+  });
+
+  it("collapse=\"true\" starts the subs collapsed (no open attribute)", () => {
+    const html = renderOpmlPage(parent('collapse="true"'), "fb");
+    expect(html).toContain("<details>");
+    expect(html).not.toContain("<details open>");
+  });
+
+  it("flBulletedSubs renders the subs as a bulleted list", () => {
+    const html = renderOpmlPage(parent('flBulletedSubs="true"'), "fb");
+    expect(html).toContain('<ul class="subs-bulleted">');
+  });
+
+  it("flNumberedSubs renders the subs as a numbered <ol>", () => {
+    const html = renderOpmlPage(parent('flNumberedSubs="true"'), "fb");
+    expect(html).toContain('<ol class="subs-numbered">');
+  });
+
+  it("ignores the flags on a childless headline (still a leaf)", () => {
+    const html = renderOpmlPage(
+      wrap("", '<outline text="lonely" flBulletedSubs="true" collapse="true"/>'),
+      "fb",
+    );
+    expect(html).toContain('<li class="leaf">lonely</li>');
+    expect(html).not.toContain('class="subs-bulleted"');
+    expect(html).not.toContain("<details");
+  });
+
+  it("treats a non-true flag value as unset", () => {
+    const html = renderOpmlPage(parent('collapse="false"'), "fb");
+    expect(html).toContain("<details open>");
+  });
+});
+
 describe("renderOpmlPage outline text is Markdown", () => {
   it("renders a Markdown heading as an inline heading label", () => {
     const html = renderOpmlPage(wrap("", '<outline text="## Section"/>'), "fb");

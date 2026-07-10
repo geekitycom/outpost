@@ -146,9 +146,19 @@ h1 { font-size: 1.75em; line-height: 1.25; margin: 0 0 0.25rem; font-weight: 600
 .opml-meta { color: #59636e; font-size: 0.9em; margin: 0; }
 a { color: #0969da; text-decoration: none; }
 a:hover { text-decoration: underline; }
-ul.outline, ul.outline ul { list-style: none; margin: 0; padding: 0; }
-ul.outline ul { padding-left: 1.25em; border-left: 1px solid #d1d9e0; margin-left: 0.4em; }
+ul.outline, ul.outline ul, ul.outline ol { list-style: none; margin: 0; padding: 0; }
+ul.outline ul, ul.outline ol { padding-left: 1.25em; border-left: 1px solid #d1d9e0; margin-left: 0.4em; }
 ul.outline li { margin: 0.15em 0; }
+/* flBulletedSubs / flNumberedSubs: show a marker beside each sub. The marker
+   sits in extra left padding so it clears the summary triangle / leaf indent. */
+ul.outline ul.subs-bulleted { list-style: disc; padding-left: 2.4em; }
+ul.outline ol.subs-numbered { list-style: decimal; padding-left: 2.4em; }
+ul.outline ul.subs-bulleted > li,
+ul.outline ol.subs-numbered > li { margin: 0.15em 0; }
+ul.outline ul.subs-bulleted > li.leaf,
+ul.outline ol.subs-numbered > li.leaf { padding-left: 0; }
+ul.outline ul.subs-bulleted > li::marker,
+ul.outline ol.subs-numbered > li::marker { color: #59636e; }
 /* Markdown in an outline label renders inline: headings become bold labels
    (no block margins/border) so they sit beside the summary triangle, and a
    stray paragraph never adds vertical gaps to a row. */
@@ -190,7 +200,9 @@ li.leaf { padding-left: 1em; }
   body { color: #e6edf3; background: #0d1117; }
   .opml-meta, details > summary::before, .rss-tag { color: #9198a1; }
   a { color: #4493f8; }
-  ul.outline ul { border-left-color: #3d444d; }
+  ul.outline ul, ul.outline ol { border-left-color: #3d444d; }
+  ul.outline ul.subs-bulleted > li::marker,
+  ul.outline ol.subs-numbered > li::marker { color: #9198a1; }
   .rss-tag { border-color: #3d444d; }
 }
 </style>

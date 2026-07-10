@@ -122,13 +122,31 @@ function renderOutlines(node: unknown): string {
     .join("");
 }
 
-/** Render one `<outline>` node (and its children, recursively) to an `<li>`. */
+/**
+ * Render one `<outline>` headline (and its subs, recursively) to an `<li>`.
+ *
+ * Three optional attributes on a headline with subs (Fargo/Drummer conventions)
+ * shape how the subs display:
+ *   - `flBulletedSubs` — show a bullet beside each sub.
+ *   - `flNumberedSubs` — number the subs in sequence (renders an `<ol>`).
+ *   - `collapse` — start the subs collapsed instead of expanded.
+ */
 function renderOutline(outline: Record<string, unknown>): string {
   const label = renderLabel(outline);
   const childHtml = renderOutlines(outline["outline"]);
 
   if (childHtml.length > 0) {
-    return `<li><details open><summary>${label}</summary><ul>${childHtml}</ul></details></li>`;
+    const open = attrFlag(outline, "collapse") ? "" : " open";
+    const numbered = attrFlag(outline, "flNumberedSubs");
+    const bulleted = attrFlag(outline, "flBulletedSubs");
+    // Numbering needs an <ol> for sequence; bullets stay a <ul> with a marker.
+    const tag = numbered ? "ol" : "ul";
+    const cls = numbered
+      ? ' class="subs-numbered"'
+      : bulleted
+        ? ' class="subs-bulleted"'
+        : "";
+    return `<li><details${open}><summary>${label}</summary><${tag}${cls}>${childHtml}</${tag}></details></li>`;
   }
   return `<li class="leaf">${label}</li>`;
 }
@@ -185,6 +203,16 @@ function renderOutlineText(text: string): string {
 /** Read a prefixed attribute value off a parsed element. */
 function attr(outline: Record<string, unknown>, name: string): unknown {
   return outline[`${ATTR_PREFIX}${name}`];
+}
+
+/**
+ * Read a boolean-ish outline attribute. OPML flags are conventionally the
+ * string "true" (fast-xml-parser may also hand back a real boolean), so treat
+ * true/1/yes as set and everything else (including absent) as unset.
+ */
+function attrFlag(outline: Record<string, unknown>, name: string): boolean {
+  const value = coerceText(attr(outline, name))?.trim().toLowerCase();
+  return value === "true" || value === "1" || value === "yes";
 }
 
 /** Wrap a single value in an array, pass arrays through, drop null/undefined. */

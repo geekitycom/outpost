@@ -6,9 +6,7 @@ folder and Outpost serves them correctly for that domain, routed by the request'
 `Host` header.
 
 It is a modern, self-contained [Hono](https://hono.dev/) + TypeScript app,
-inspired by Dave Winer's PagePark. It is fully self-contained: **no external services
-at runtime** (no S3, no GitHub API, no calls to third-party hosts), **no CDN assets**
-(all CSS/JS is inlined into templates), and no frameworks on the frontend.
+inspired by Dave Winer's PagePark.
 
 ---
 
@@ -113,7 +111,7 @@ Within a domain folder:
 | Extension        | Behavior                                                                                                   |
 |------------------|------------------------------------------------------------------------------------------------------------|
 | `.md`            | Rendered Markdown → HTML in a self-contained template. The first `# H1` becomes the title (else the file name). `Content-Type: text/html`. |
-| `.opml`          | Rendered outline → collapsible HTML; each node's `text` is rendered as inline Markdown (links, `## ` headings, and raw HTML pass through). `text/html`. **Except**: with `Accept: text/x-opml` or `?format=opml`, the raw OPML XML is served as `text/x-opml`. |
+| `.opml`          | Rendered outline → collapsible HTML; each headline's `text` is rendered as inline Markdown (links, `## ` headings, and raw HTML pass through). Headline attributes `flBulletedSubs`/`flNumberedSubs` mark subs with bullets/numbers and `collapse="true"` starts them collapsed. `text/html`. **Except**: with `Accept: text/x-opml` or `?format=opml`, the raw OPML XML is served as `text/x-opml`. |
 | `.html`, `.htm`  | Served as-is, `text/html`.                                                                                  |
 | `.js`            | Served as a **static** file (`text/javascript`) — never executed.                                          |
 | images / other   | Served as-is with a MIME type derived from the extension.                                                   |

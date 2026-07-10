@@ -144,7 +144,21 @@ describe("renderOpmlPage link handling", () => {
     expect(html).toContain("A site");
   });
 
-  it('renders type="rss" with xmlUrl as a feed anchor', () => {
+  it('renders type="rss" with the headline linking to htmlUrl and an RSS tag linking to xmlUrl', () => {
+    const html = renderOpmlPage(
+      wrap(
+        "",
+        '<outline text="A feed" type="rss" xmlUrl="https://example.com/feed.xml" htmlUrl="https://example.com/"/>',
+      ),
+      "fb",
+    );
+    expect(html).toContain('<a href="https://example.com/">A feed</a>');
+    expect(html).toContain(
+      '<a class="rss-tag" href="https://example.com/feed.xml">RSS</a>',
+    );
+  });
+
+  it('falls back to xmlUrl for the headline when type="rss" has no htmlUrl', () => {
     const html = renderOpmlPage(
       wrap(
         "",
@@ -152,8 +166,23 @@ describe("renderOpmlPage link handling", () => {
       ),
       "fb",
     );
-    expect(html).toContain('href="https://example.com/feed.xml"');
-    expect(html).toContain("A feed");
+    expect(html).toContain('<a href="https://example.com/feed.xml">A feed</a>');
+    expect(html).toContain(
+      '<a class="rss-tag" href="https://example.com/feed.xml">RSS</a>',
+    );
+  });
+
+  it('renders a type="rss" description as the headline hover title', () => {
+    const html = renderOpmlPage(
+      wrap(
+        "",
+        '<outline text="A feed" type="rss" xmlUrl="https://example.com/feed.xml" htmlUrl="https://example.com/" description="All the news"/>',
+      ),
+      "fb",
+    );
+    expect(html).toContain(
+      '<a href="https://example.com/" title="All the news">A feed</a>',
+    );
   });
 
   it("escapes an href to prevent attribute-breakout", () => {

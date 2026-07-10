@@ -53,7 +53,13 @@ export async function renderOpml(
     const fallbackTitle =
       config.siteTitle ?? basename(filePath, extname(filePath));
     const template = loadTemplateSource(roots, "opml") ?? OPML_FALLBACK;
-    const html = renderOpmlPage(source, fallbackTitle, template, roots);
+    const html = renderOpmlPage(
+      source,
+      fallbackTitle,
+      template,
+      roots,
+      basename(filePath),
+    );
     return new Response(html, {
       status: 200,
       headers: { "content-type": "text/html; charset=utf-8" },
@@ -81,12 +87,19 @@ function wantsRawOpml(request: ServeRequest): boolean {
  * elements become a collapsible nested list, wrapped in the given `template`
  * (the embedded fallback by default). Throws on malformed XML so the
  * `renderOpml` wrapper can return a 500 rather than crash.
+ *
+ * `fileName` is the served file's base name (e.g. `index.opml`); it becomes the
+ * relative `?format=opml` href the page advertises (via `<link rel="alternate">`
+ * and the XML badge). Naming the file explicitly — rather than a bare
+ * `?format=opml` — keeps the link correct for an index served at a directory URL
+ * (`/` → `index.opml?format=opml`) so a raw download lands with the right name.
  */
 export function renderOpmlPage(
   source: string,
   fallbackTitle: string,
   template: string = OPML_FALLBACK,
   roots: string[] = [],
+  fileName: string = "",
 ): string {
   const validation = XMLValidator.validate(source);
   if (validation !== true) {
@@ -114,6 +127,14 @@ export function renderOpmlPage(
       ? `<p class="opml-meta">Last modified: ${escapeHtml(dateModified)}</p>`
       : "";
 
+  // Relative href to the raw OPML. Encode the file name so a space or other
+  // reserved character stays a valid path segment; the template `<%= %>` then
+  // HTML-escapes it into the attribute. Falls back to a bare query (resolves
+  // against the current URL) when no file name is supplied (direct callers).
+  const opmlHref = fileName
+    ? `${encodeURIComponent(fileName)}?format=opml`
+    : "?format=opml";
+
   return renderTemplate(
     template,
     {
@@ -123,6 +144,7 @@ export function renderOpmlPage(
       header: pageTitle,
       meta,
       body: `<ul class="outline">${outlineHtml}</ul>`,
+      opmlHref,
     },
     roots,
   );

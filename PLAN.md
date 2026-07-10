@@ -28,7 +28,7 @@ Package manager is **pnpm** (via corepack; pinned by `packageManager` in `packag
 - `pnpm test` — `vitest run`.
 
 ### Conventions
-- **Node 20+, ESM, TypeScript strict** (`NodeNext` resolution). Because of NodeNext,
+- **Node 24+, ESM, TypeScript strict** (`NodeNext` resolution). Because of NodeNext,
   **relative imports must use the `.js` extension** even in `.ts` files
   (`import { loadConfig } from "./config.js"`). This is correct, not a typo.
 - Source lives in `src/`; entry is `src/index.ts` → `createApp()` in `src/app.ts`.
@@ -231,7 +231,7 @@ Tailwind build that compiles to a static CSS file we inline — but not now.
 
 ## 6. Tech stack & project structure
 
-**Stack:** Node 20+, TypeScript, Hono (`hono` + `@hono/node-server`), `fast-xml-parser`,
+**Stack:** Node 24+, TypeScript, Hono (`hono` + `@hono/node-server`), `fast-xml-parser`,
 `marked`, `mime-types`. Dev: `vitest`, `tsx`, `typescript`, `@types/*`.
 
 ```
@@ -289,7 +289,7 @@ No TLS in-app — Caddy terminates HTTPS and reverse-proxies to `localhost:PORT`
 ## 8. Deployment (Docker + Dockge + Caddy)
 
 - **Dockerfile:** multi-stage — build TS → run compiled JS on a slim Node base
-  (`node:20-slim` or distroless). Non-root user. `EXPOSE` the port.
+  (`node:24-slim` or distroless). Non-root user. `EXPOSE` the port.
 - **Volume:** mount the host's domains directory to `OUTPOST_DOMAINS_DIR` so content
   is edited outside the container and persists across deploys.
 - **Compose (for Dockge):** service exposing `127.0.0.1:PORT:PORT`, the domains volume,
@@ -339,7 +339,7 @@ Use **vitest** with fixture domain folders under `test/fixtures/domains/`:
    guard), host edge cases (forwarded-header trust on/off, missing default folder),
    and `/healthz` + `/version`.
 7. ✅ **Docker + deploy** — multi-stage `Dockerfile` (build TS → run compiled JS on
-   `node:22-slim`, prod deps only, non-root `node` user, `HOST=0.0.0.0`, `/healthz`
+   `node:24-slim`, prod deps only, non-root `node` user, `HOST=0.0.0.0`, `/healthz`
    HEALTHCHECK via Node `fetch`), `.dockerignore`, Dockge-friendly `compose.yaml`
    (`127.0.0.1:3000:3000`, domains volume, env in sync with `src/config.ts`),
    sample `Caddyfile`, README rewrite. `templates/` is NOT shipped — renderers inline

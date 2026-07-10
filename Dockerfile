@@ -2,7 +2,7 @@
 
 # ── Build stage ───────────────────────────────────────────────────────────────
 # Install ALL deps (incl. dev) and compile TypeScript → dist/.
-FROM node:22-slim AS build
+FROM node:24-slim AS build
 WORKDIR /app
 
 # pnpm is provisioned by corepack, pinned via the "packageManager" field in
@@ -21,7 +21,7 @@ RUN pnpm run build
 
 # ── Runtime stage ─────────────────────────────────────────────────────────────
 # Slim Node base, production deps only, non-root, compiled JS.
-FROM node:22-slim AS runtime
+FROM node:24-slim AS runtime
 WORKDIR /app
 ENV NODE_ENV=production
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0

@@ -27,7 +27,7 @@ existed in the legacy implementation and were deliberately removed.
 
 ## Quick start
 
-Requires **Node 20+**. This project uses **pnpm**, provisioned via
+Requires **Node 24+** (the active LTS). This project uses **pnpm**, provisioned via
 [corepack](https://nodejs.org/api/corepack.html) (bundled with Node) — the exact
 version is pinned by the `packageManager` field in `package.json`, so you don't
 install pnpm globally.
@@ -230,7 +230,7 @@ header.
 
 ## Development
 
-- **Node 20+, ESM, TypeScript strict** (`NodeNext` resolution). Relative imports
+- **Node 24+, ESM, TypeScript strict** (`NodeNext` resolution). Relative imports
   use the `.js` extension even in `.ts` files (e.g. `import { loadConfig } from "./config.js"`)
   — this is correct for NodeNext, not a typo.
 - Source lives in `src/`; entry is `src/index.ts` → `createApp()` in `src/app.ts`.

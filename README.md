@@ -129,14 +129,27 @@ Within a domain folder:
 |------------------|------------------------------------------------------------------------------------------------------------|
 | `.md`            | Rendered Markdown → HTML in a self-contained template. The first `# H1` becomes the title (else the file name). `Content-Type: text/html`. |
 | `.opml`          | Rendered outline → collapsible HTML; each headline's `text` is rendered as inline Markdown (links, `## ` headings, and raw HTML pass through). Headline attributes `flBulletedSubs`/`flNumberedSubs` mark subs with bullets/numbers and `collapse="true"` starts them collapsed. `text/html`. **Except**: with `Accept: text/x-opml` or `?format=opml`, the raw OPML XML is served as `text/x-opml`. |
-| `.html`, `.htm`  | Served as-is, `text/html`.                                                                                  |
+| `.html`, `.htm`  | Served as-is, `text/html`. Not cached, so in-place edits are served fresh.                                  |
 | `.js`            | Served as a **static** file (`text/javascript`) — never executed.                                          |
 | images / other   | Served as-is with a MIME type derived from the extension.                                                   |
 | no extension     | Served with the configured default type (default `text/html`), unless `defaultExtension` applies (below).  |
 
-Markdown and OPML rendering are done server-side with our own inline CSS/JS —
-nothing is fetched from a CDN or any third-party host. Malformed OPML returns a
-plain-text 500 rather than crashing.
+Markdown and OPML rendering are done server-side. Page templates share a common
+Eta **layout** (`_templates/layout.eta`) and pull their styles from external,
+cache-friendly stylesheets under `css/` — the layout links a same-origin
+`/css/base.css` plus a per-page sheet (`markdown.css`, `opml.css`, `404.css`)
+rather than inlining CSS — and it references a standard favicon/manifest set
+(`favicon.ico`, `favicon-*.png`, `apple-touch-icon.png`,
+`android-chrome-*.png`, `site.webmanifest`). These assets are served through the
+**same cascade** as everything else, so a domain can override `css/*.css` or its
+favicons. Everything is same-origin, served by Outpost itself — nothing is
+fetched from a CDN or any third-party host. Malformed OPML returns a plain-text
+500 rather than crashing.
+
+**Caching:** non-HTML static assets (CSS, favicons, images, JS) are sent with
+`Cache-Control: public, max-age=3600` and a `Last-Modified` header so browsers
+reuse them across page loads. HTML — both static `.html` files and rendered
+Markdown/OPML pages — is sent uncached so edits appear immediately.
 
 ---
 

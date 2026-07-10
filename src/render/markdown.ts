@@ -26,7 +26,7 @@ export async function renderMarkdown(
   // document has no `# H1` of its own.
   const fallbackTitle = config.siteTitle ?? basename(filePath, extname(filePath));
   const template = loadTemplateSource(roots, "markdown") ?? MARKDOWN_FALLBACK;
-  const html = renderMarkdownPage(source, fallbackTitle, template);
+  const html = renderMarkdownPage(source, fallbackTitle, template, roots);
   return new Response(html, {
     status: 200,
     headers: { "content-type": "text/html; charset=utf-8" },
@@ -39,16 +39,19 @@ export async function renderMarkdown(
  * The page `<title>` is the first `# H1` heading's text, falling back to
  * `fallbackTitle` (the file's base name) when there is no H1 — mirroring the
  * legacy behavior. The rendered body is wrapped in the given `template` (the
- * embedded fallback by default), whose `<%= %>` escapes the raw title.
+ * embedded fallback by default), whose `<%= %>` escapes the raw title. `roots`
+ * let a shipped template's `layout(...)`/`include(...)` resolve across the
+ * cascade; the embedded fallback ignores them.
  */
 export function renderMarkdownPage(
   source: string,
   fallbackTitle: string,
   template: string = MARKDOWN_FALLBACK,
+  roots: string[] = [],
 ): string {
   const title = extractTitle(source) ?? fallbackTitle;
   const body = marked.parse(source, { async: false });
-  return renderTemplate(template, { title, body });
+  return renderTemplate(template, { title, body }, roots);
 }
 
 /** First `# H1` heading text, or `undefined` if the document has none. */

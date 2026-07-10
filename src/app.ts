@@ -92,7 +92,7 @@ export function createApp(config: Config): Hono {
  */
 function notFound(c: Context, roots: string[], path: string): Response {
   const source = loadTemplateSource(roots, "404") ?? NOT_FOUND_FALLBACK;
-  return c.html(renderTemplate(source, { path }), 404);
+  return c.html(renderTemplate(source, { path }, roots), 404);
 }
 
 /** Basic stdout request logging: method, host, path, status. */

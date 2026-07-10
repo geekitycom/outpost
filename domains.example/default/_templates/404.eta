@@ -1,48 +1,6 @@
-<!doctype html>
-<html lang="en">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>404 Not Found</title>
-<style>
-:root { color-scheme: light dark; }
-* { box-sizing: border-box; }
-body {
-  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
-  line-height: 1.6;
-  color: #1f2328;
-  background: #ffffff;
-  margin: 0;
-  min-height: 100vh;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 2rem 1rem;
-}
-main { max-width: 32rem; text-align: center; }
-h1 { font-size: 4em; margin: 0; font-weight: 700; color: #59636e; }
-p { margin: 0.5em 0 0; }
-code {
-  font-family: ui-monospace, SFMono-Regular, "SF Mono", Menlo, Consolas, monospace;
-  font-size: 0.9em;
-  background: rgba(129, 139, 152, 0.12);
-  padding: 0.2em 0.4em;
-  border-radius: 6px;
-}
-@media (prefers-color-scheme: dark) {
-  body { color: #e6edf3; background: #0d1117; }
-  h1 { color: #9198a1; }
-  code { background: rgba(101, 108, 118, 0.2); }
-}
-</style>
-</head>
-<body>
-<main>
+<% layout("layout", { title: "404 Not Found", stylesheet: "404", bodyClass: "page-404" }) %>
 <h1>404</h1>
 <p>Not Found</p>
 <% if (it.path) { %>
 <p><code><%= it.path %></code> could not be found.</p>
 <% } %>
-</main>
-</body>
-</html>

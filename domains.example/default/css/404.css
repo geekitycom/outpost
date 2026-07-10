@@ -1,0 +1,17 @@
+/* 404 page layout, on top of base.css. Centers a short message with an oversized
+   status heading. Base bits (font-family, color/background, inline `code`) live
+   in base.css. */
+body {
+  line-height: 1.6;
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+}
+main { max-width: 32rem; text-align: center; }
+h1 { font-size: 4em; margin: 0; font-weight: 700; color: #59636e; }
+p { margin: 0.5em 0 0; }
+@media (prefers-color-scheme: dark) {
+  h1 { color: #9198a1; }
+}

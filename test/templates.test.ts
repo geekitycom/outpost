@@ -61,24 +61,57 @@ describe("loadTemplateSource", () => {
   });
 });
 
-describe("shipped default templates are self-contained", () => {
-  const sampleFor = {
-    markdown: { title: "Title", body: "<h1>Title</h1><p>hi</p>" },
-    opml: {
-      title: "Title",
-      header: "Title",
-      meta: '<p class="opml-meta">Last modified: now</p>',
-      body: '<ul class="outline"><li class="leaf">node</li></ul>',
-    },
-  };
+describe("shipped default templates render via the layout", () => {
+  // The shipped templates call `layout("layout")`, so they must render with the
+  // domain root as a cascade root for the bare `layout` name to resolve.
+  const defaultRoot = resolve(repoRoot, "domains.example/default");
 
-  for (const name of ["markdown", "opml"] as const) {
-    it(`${name}.eta renders with no external assets or scripts`, () => {
-      const source = readFileSync(
-        resolve(repoRoot, `domains.example/default/_templates/${name}.eta`),
-        "utf8",
+  const cases = {
+    markdown: {
+      data: { title: "Title", body: "<h1>Title</h1><p>hi</p>" },
+      stylesheet: "markdown",
+      title: "Title",
+      bodyText: "<h1>Title</h1>",
+    },
+    opml: {
+      data: {
+        title: "Title",
+        header: "Title",
+        meta: '<p class="opml-meta">Last modified: now</p>',
+        body: '<ul class="outline"><li class="leaf">node</li></ul>',
+      },
+      stylesheet: "opml",
+      title: "Title",
+      bodyText: '<li class="leaf">node</li>',
+    },
+    "404": {
+      data: { path: "/missing.html" },
+      stylesheet: "404",
+      // The layout's title comes from the child template's own layout data.
+      title: "404 Not Found",
+      bodyText: "<h1>404</h1>",
+    },
+  } as const;
+
+  for (const name of ["markdown", "opml", "404"] as const) {
+    const c = cases[name];
+
+    it(`${name}.eta emits the base and page stylesheet links`, () => {
+      const html = render(name, c.data);
+      expect(html).toContain('<link rel="stylesheet" href="/css/base.css">');
+      expect(html).toContain(
+        `<link rel="stylesheet" href="/css/${c.stylesheet}.css">`,
       );
-      const html = renderTemplate(source, sampleFor[name]);
+    });
+
+    it(`${name}.eta emits the favicon and manifest links`, () => {
+      const html = render(name, c.data);
+      expect(html).toContain('href="/favicon-32x32.png"');
+      expect(html).toContain('href="/site.webmanifest"');
+    });
+
+    it(`${name}.eta stays self-contained (no external assets or scripts)`, () => {
+      const html = render(name, c.data);
       expect(html).not.toMatch(/https?:\/\//);
       expect(html).not.toMatch(/s3\.amazonaws/);
       expect(html).not.toMatch(/scripting\.com/);
@@ -87,7 +120,21 @@ describe("shipped default templates are self-contained", () => {
       expect(html).not.toMatch(/bootstrap/i);
       expect(html).not.toMatch(/fargo/i);
       expect(html).not.toMatch(/<script/i);
-      expect(html).toContain("<title>Title</title>");
     });
+
+    it(`${name}.eta carries the title and rendered body`, () => {
+      const html = render(name, c.data);
+      expect(html).toContain(`<title>${c.title}</title>`);
+      expect(html).toContain(c.bodyText);
+    });
+  }
+
+  /** Render a shipped template by name against the default domain root. */
+  function render(name: string, data: Record<string, unknown>): string {
+    const source = readFileSync(
+      resolve(defaultRoot, `_templates/${name}.eta`),
+      "utf8",
+    );
+    return renderTemplate(source, data, [defaultRoot]);
   }
 });

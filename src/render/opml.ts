@@ -194,7 +194,11 @@ function renderOutline(outline: Record<string, unknown>): string {
 
 /**
  * The visible label for an outline node: an anchor for type "link" (url) or
- * type "rss" (xmlUrl/url), otherwise the text rendered as inline Markdown.
+ * type "rss", otherwise the text rendered as inline Markdown.
+ *
+ * For a feed, the headline links to the site (`htmlUrl`, falling back to the
+ * feed url) and a trailing "RSS" tag links to the feed itself (`xmlUrl`/`url`);
+ * the feed's `description` becomes the headline's hover `title`.
  *
  * Feed/link titles are escaped (they are plain labels, and rendering them as
  * Markdown could nest anchors inside the generated anchor), so a hostile url
@@ -210,9 +214,19 @@ function renderLabel(outline: Record<string, unknown>): string {
   }
 
   if (type === "rss") {
-    const url = coerceText(attr(outline, "xmlUrl")) ?? coerceText(attr(outline, "url"));
-    if (url) {
-      return `<a href="${escapeHtml(url)}">${escapeHtml(text)}</a><span class="rss-tag">RSS</span>`;
+    const feedUrl =
+      coerceText(attr(outline, "xmlUrl")) ?? coerceText(attr(outline, "url"));
+    const siteUrl = coerceText(attr(outline, "htmlUrl")) ?? feedUrl;
+    if (siteUrl) {
+      const description = coerceText(attr(outline, "description"))?.trim();
+      const titleAttr =
+        description && description.length > 0
+          ? ` title="${escapeHtml(description)}"`
+          : "";
+      const rssTag = feedUrl
+        ? `<a class="rss-tag" href="${escapeHtml(feedUrl)}">RSS</a>`
+        : "";
+      return `<a href="${escapeHtml(siteUrl)}"${titleAttr}>${escapeHtml(text)}</a>${rssTag}`;
     }
   }
 

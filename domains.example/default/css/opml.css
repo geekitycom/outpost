@@ -59,11 +59,14 @@ li.leaf { padding-left: 1em; }
   padding: 0 0.3em;
   margin-left: 0.4em;
   vertical-align: middle;
+  text-decoration: none;
 }
+a.rss-tag:hover { border-color: #59636e; text-decoration: none; }
 @media (prefers-color-scheme: dark) {
   .opml-meta, details > summary::before, .rss-tag { color: #9198a1; }
   ul.outline ul, ul.outline ol { border-left-color: #3d444d; }
   ul.outline ul.subs-bulleted > li::marker,
   ul.outline ol.subs-numbered > li::marker { color: #9198a1; }
   .rss-tag { border-color: #3d444d; }
+  a.rss-tag:hover { border-color: #9198a1; }
 }

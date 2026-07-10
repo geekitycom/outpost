@@ -8,14 +8,17 @@
     "node": ">=24"
   },
   "pnpm": {
-    "ignoredBuiltDependencies": ["esbuild"]
+    "ignoredBuiltDependencies": [
+      "esbuild"
+    ]
   },
   "scripts": {
     "dev": "tsx watch src/index.ts",
     "build": "tsc",
     "start": "node dist/index.js",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "prepare": "husky"
   },
   "dependencies": {
     "@hono/node-server": "^1.13.7",
@@ -25,8 +28,11 @@
     "mime-types": "^3.0.2"
   },
   "devDependencies": {
+    "@commitlint/cli": "^21.2.1",
+    "@commitlint/config-conventional": "^21.2.0",
     "@types/mime-types": "^3.0.1",
     "@types/node": "^22.10.2",
+    "husky": "^9.1.7",
     "tsx": "^4.19.2",
     "typescript": "^5.7.2",
     "vitest": "^2.1.8"

@@ -1,3 +1,4 @@
+import { readFileSync } from "node:fs";
 import { Hono } from "hono";
 import type { Context } from "hono";
 import type { Config } from "./config.js";
@@ -11,7 +12,17 @@ import {
   renderTemplate,
 } from "./render/templates.js";
 
-export const VERSION = "1.0.0";
+/**
+ * The running version, read from `package.json` at startup rather than
+ * hardcoded — release-please bumps only `package.json`, so a literal here would
+ * silently drift after every release. `package.json` sits one level up from both
+ * `src/` (dev) and `dist/` (the compiled runtime), and ships in the Docker image.
+ */
+export const VERSION = (
+  JSON.parse(
+    readFileSync(new URL("../package.json", import.meta.url), "utf8"),
+  ) as { version: string }
+).version;
 
 /**
  * Build the Hono app: operational endpoints first, then a catch-all that routes

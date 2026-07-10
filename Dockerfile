@@ -27,9 +27,11 @@ ENV NODE_ENV=production
 ENV COREPACK_ENABLE_DOWNLOAD_PROMPT=0
 RUN corepack enable
 
-# Install production dependencies only.
+# Install production dependencies only. --ignore-scripts skips lifecycle hooks
+# (notably the `prepare` → husky dev-tooling step), which aren't installed under
+# --prod and would otherwise fail the build; the prod deps need no build scripts.
 COPY package.json pnpm-lock.yaml ./
-RUN pnpm install --prod --frozen-lockfile && pnpm store prune
+RUN pnpm install --prod --frozen-lockfile --ignore-scripts && pnpm store prune
 
 # Copy the compiled output. Only the emergency fallback templates are embedded
 # as strings in dist/; the real, styled page templates ship as .eta files inside
@@ -53,6 +55,12 @@ ENV PORT=3000 \
     TRUST_FORWARDED_HEADERS=on
 
 EXPOSE 3000
+
+# Create the domains root and hand it to the `node` user. A bind mount usually
+# covers this path at runtime, but pre-creating it (owned by node) lets the
+# container also start bare: the app's first-run mkdir would otherwise fail as
+# non-root trying to create a directory at the filesystem root.
+RUN mkdir -p /domains && chown node:node /domains
 
 # Run as the unprivileged `node` user that ships with the base image.
 USER node

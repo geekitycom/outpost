@@ -262,6 +262,35 @@ wherever your host keeps its domain content:
 docker compose up -d --build
 ```
 
+To run the **published image** instead of building locally, paste this stack
+into Dockge (it pulls `ghcr.io/geekitycom/outpost`, published by
+`pnpm docker:build-push`). Put the env vars in an adjacent `.env` file and mount
+your host content dir at `/domains`:
+
+```yaml
+services:
+  outpost:
+    image: ghcr.io/geekitycom/outpost:latest
+    restart: unless-stopped
+    ports:
+      - 127.0.0.1:3000:3000
+    env_file:
+      - .env
+    volumes:
+      - ./domains:/domains
+networks: {}
+```
+
+```dotenv
+# .env
+PORT=3000
+HOST=0.0.0.0
+OUTPOST_DOMAINS_DIR=/domains
+TRUST_FORWARDED_HEADERS=on
+```
+
+Publishing on `127.0.0.1` keeps the container reachable only through Caddy.
+
 ### Caddy (TLS + virtual hosts)
 
 Caddy on the host terminates HTTPS and reverse-proxies to Outpost. Caddy v2

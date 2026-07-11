@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.1](https://github.com/geekitycom/outpost/compare/outpost-v1.1.0...outpost-v1.1.1) (2026-07-11)
+
+
+### Bug Fixes
+
+* repair Docker prod install, version drift, and bare startup ([4c46aa7](https://github.com/geekitycom/outpost/commit/4c46aa7d6cebe54b728014256f91d896ce3bc11e))
+
 ## [1.1.0](https://github.com/geekitycom/outpost/compare/outpost-v1.0.0...outpost-v1.1.0) (2026-07-10)
 
 

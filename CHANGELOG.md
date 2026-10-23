@@ -1,5 +1,12 @@
 # Changelog
 
+## [1.1.2](https://github.com/geekitycom/outpost/compare/outpost-v1.1.1...outpost-v1.1.2) (2026-10-23)
+
+
+### Bug Fixes
+
+* **deps:** patch npm audit findings and Node October 2026 CVEs ([1f08a79](https://github.com/geekitycom/outpost/commit/1f08a79f0c523953453c72c7885e1bd5ba68ccff))
+
 ## [1.1.1](https://github.com/geekitycom/outpost/compare/outpost-v1.1.0...outpost-v1.1.1) (2026-07-11)
 
 
